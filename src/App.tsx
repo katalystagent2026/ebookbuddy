@@ -31,7 +31,14 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/meeting" element={<MeetingRoom />} />
+            <Route 
+              path="/meeting" 
+              element={
+                <ProtectedRoute>
+                  <MeetingRoom />
+                </ProtectedRoute>
+              } 
+            />
             <Route
               path="/admin" 
               element={
