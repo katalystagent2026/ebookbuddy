@@ -8,10 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Video, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const MeetingRoom = () => {
   const navigate = useNavigate();
-  const [meetingId, setMeetingId] = useState("");
+  const { user } = useAuth();
+  const [meetingId, setMeetingId] = useState("885 0722 0856");
   const [passcode, setPasscode] = useState("");
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +21,14 @@ const MeetingRoom = () => {
   const [isInMeeting, setIsInMeeting] = useState(false);
   const meetingContainerRef = useRef<HTMLDivElement>(null);
   const zoomClientRef = useRef<any>(null);
+
+  // Set userName from logged-in user
+  useEffect(() => {
+    if (user) {
+      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+      setUserName(displayName);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Pre-load the Zoom SDK
