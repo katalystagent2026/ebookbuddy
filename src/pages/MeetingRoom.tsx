@@ -19,6 +19,7 @@ const MeetingRoom = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSdkLoading, setIsSdkLoading] = useState(true);
   const [isInMeeting, setIsInMeeting] = useState(false);
+  const [hasAutoJoined, setHasAutoJoined] = useState(false);
   const meetingContainerRef = useRef<HTMLDivElement>(null);
   const zoomClientRef = useRef<any>(null);
 
@@ -57,6 +58,14 @@ const MeetingRoom = () => {
       }
     };
   }, []);
+
+  // Auto-join meeting when SDK is ready and user details are set
+  useEffect(() => {
+    if (!isSdkLoading && userName && meetingId && !isInMeeting && !isLoading && !hasAutoJoined && zoomClientRef.current) {
+      setHasAutoJoined(true);
+      handleJoinMeeting();
+    }
+  }, [isSdkLoading, userName, meetingId, isInMeeting, isLoading, hasAutoJoined]);
 
   const handleJoinMeeting = async () => {
     if (!meetingId || !userName) {
