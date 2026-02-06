@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Ebooks from "./pages/Ebooks";
 import MeetingRoom from "./pages/MeetingRoom";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -32,7 +34,23 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route 
-              path="/meeting" 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ebooks" 
+              element={
+                <ProtectedRoute>
+                  <Ebooks />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/meeting"
               element={
                 <ProtectedRoute>
                   <MeetingRoom />
