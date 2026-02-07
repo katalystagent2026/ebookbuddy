@@ -14,7 +14,7 @@ const MeetingRoom = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [meetingId, setMeetingId] = useState("885 0722 0856");
-  const [passcode, setPasscode] = useState("");
+  const [passcode, setPasscode] = useState("475217");
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSdkLoading, setIsSdkLoading] = useState(true);
