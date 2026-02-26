@@ -1,11 +1,13 @@
 import { Book, Sparkles, Heart } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 export function Footer() {
+  const { t } = useI18n();
+
   return (
     <footer className="bg-foreground text-card py-16">
       <div className="safe-container">
         <div className="grid md:grid-cols-4 gap-12 mb-12">
-          {/* Logo & mission */}
           <div className="md:col-span-2">
             <a href="/" className="flex items-center gap-2 mb-4">
               <div className="relative">
@@ -14,78 +16,37 @@ export function Footer() {
                 </div>
                 <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-accent" />
               </div>
-              <span className="font-heading font-bold text-xl text-card">
-                eBookBuddy
-              </span>
+              <span className="font-heading font-bold text-xl text-card">eBookBuddy</span>
             </a>
-            <p className="text-card/70 max-w-sm leading-relaxed">
-              A literacy and mentorship platform where magic draws kids in, structure earns trust, and kindness keeps everyone coming back.
-            </p>
+            <p className="text-card/70 max-w-sm leading-relaxed">{t.footerMission}</p>
           </div>
 
-          {/* Quick links */}
           <div>
-            <h4 className="font-heading font-bold text-card mb-4">Explore</h4>
+            <h4 className="font-heading font-bold text-card mb-4">{t.explore}</h4>
             <ul className="space-y-3">
-              <li>
-                <a href="#how-it-works" className="text-card/70 hover:text-card transition-colors">
-                  How It Works
-                </a>
-              </li>
-              <li>
-                <a href="#book-worlds" className="text-card/70 hover:text-card transition-colors">
-                  Book Worlds
-                </a>
-              </li>
-              <li>
-                <a href="#for-schools" className="text-card/70 hover:text-card transition-colors">
-                  For Schools
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-card/70 hover:text-card transition-colors">
-                  Become a Volunteer
-                </a>
-              </li>
+              <li><a href="#how-it-works" className="text-card/70 hover:text-card transition-colors">{t.howItWorks}</a></li>
+              <li><a href="#book-worlds" className="text-card/70 hover:text-card transition-colors">{t.bookWorlds}</a></li>
+              <li><a href="#for-schools" className="text-card/70 hover:text-card transition-colors">{t.forSchools}</a></li>
+              <li><a href="#" className="text-card/70 hover:text-card transition-colors">{t.becomeVolunteer}</a></li>
             </ul>
           </div>
 
-          {/* Resources */}
           <div>
-            <h4 className="font-heading font-bold text-card mb-4">Resources</h4>
+            <h4 className="font-heading font-bold text-card mb-4">{t.resources}</h4>
             <ul className="space-y-3">
-              <li>
-                <a href="#" className="text-card/70 hover:text-card transition-colors">
-                  Safety Guidelines
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-card/70 hover:text-card transition-colors">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-card/70 hover:text-card transition-colors">
-                  Terms of Service
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-card/70 hover:text-card transition-colors">
-                  Contact Us
-                </a>
-              </li>
+              <li><a href="#" className="text-card/70 hover:text-card transition-colors">{t.safetyGuidelines}</a></li>
+              <li><a href="#" className="text-card/70 hover:text-card transition-colors">{t.privacyPolicy}</a></li>
+              <li><a href="#" className="text-card/70 hover:text-card transition-colors">{t.termsOfService}</a></li>
+              <li><a href="#" className="text-card/70 hover:text-card transition-colors">{t.contactUs}</a></li>
             </ul>
           </div>
         </div>
 
-        {/* Divider */}
         <div className="border-t border-card/20 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-card/50 text-sm">
-              © {new Date().getFullYear()} eBookBuddy. All rights reserved.
-            </p>
+            <p className="text-card/50 text-sm">© {new Date().getFullYear()} eBookBuddy. {t.allRightsReserved}</p>
             <p className="text-card/50 text-sm flex items-center gap-1">
-              Made with <Heart className="w-4 h-4 text-destructive fill-destructive" /> for young readers everywhere
+              {t.madeWith} <Heart className="w-4 h-4 text-destructive fill-destructive" /> {t.forYoungReaders}
             </p>
           </div>
         </div>
