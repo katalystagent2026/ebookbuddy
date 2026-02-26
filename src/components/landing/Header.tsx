@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Book, Menu, X, Sparkles, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +18,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,18 +49,19 @@ export function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              How It Works
+              {t.howItWorks}
             </a>
             <a href="#book-worlds" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Book Worlds
+              {t.bookWorlds}
             </a>
             <a href="#for-schools" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              For Schools
+              {t.forSchools}
             </a>
           </nav>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher />
             {loading ? null : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -74,7 +78,7 @@ export function Header() {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.email}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {isAdmin ? 'Administrator' : 'Member'}
+                        {isAdmin ? t.administrator : t.member}
                       </p>
                     </div>
                   </div>
@@ -82,12 +86,12 @@ export function Header() {
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
                       <Shield className="mr-2 h-4 w-4" />
-                      Admin Dashboard
+                      {t.adminDashboard}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    {t.signOut}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -95,12 +99,12 @@ export function Header() {
               <>
                 <Link to="/login">
                   <Button variant="ghost" size="sm">
-                    Sign In
+                    {t.signIn}
                   </Button>
                 </Link>
                 <Link to="/signup">
                   <Button variant="hero" size="default">
-                    Get Started
+                    {t.getStarted}
                   </Button>
                 </Link>
               </>
@@ -122,14 +126,17 @@ export function Header() {
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <nav className="flex flex-col gap-3">
               <a href="#how-it-works" className="py-2 text-muted-foreground hover:text-foreground transition-colors font-medium">
-                How It Works
+                {t.howItWorks}
               </a>
               <a href="#book-worlds" className="py-2 text-muted-foreground hover:text-foreground transition-colors font-medium">
-                Book Worlds
+                {t.bookWorlds}
               </a>
               <a href="#for-schools" className="py-2 text-muted-foreground hover:text-foreground transition-colors font-medium">
-                For Schools
+                {t.forSchools}
               </a>
+              <div className="py-2">
+                <LanguageSwitcher />
+              </div>
               <div className="flex gap-3 pt-3 border-t border-border">
                 {user ? (
                   <>
@@ -137,25 +144,25 @@ export function Header() {
                       <Link to="/admin" className="flex-1">
                         <Button variant="outline" size="sm" className="w-full">
                           <Shield className="mr-2 h-4 w-4" />
-                          Admin
+                          {t.adminDashboard}
                         </Button>
                       </Link>
                     )}
                     <Button variant="ghost" size="sm" className="flex-1" onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
+                      {t.signOut}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Link to="/login" className="flex-1">
                       <Button variant="ghost" size="sm" className="w-full">
-                        Sign In
+                        {t.signIn}
                       </Button>
                     </Link>
                     <Link to="/signup" className="flex-1">
                       <Button variant="hero" size="sm" className="w-full">
-                        Get Started
+                        {t.getStarted}
                       </Button>
                     </Link>
                   </>
