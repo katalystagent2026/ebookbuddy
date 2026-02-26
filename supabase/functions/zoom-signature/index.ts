@@ -1,37 +1,60 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface SignatureRequest {
   meetingNumber: string;
-  role: number; // 0 for attendee, 1 for host
+  role: number;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Authenticate the caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data, error: authError } = await supabase.auth.getClaims(token);
+    if (authError || !data?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = data.claims.sub;
+    console.log("Authenticated user requesting Zoom signature:", userId);
+
     const sdkKey = Deno.env.get("ZOOM_SDK_KEY");
     const sdkSecret = Deno.env.get("ZOOM_SDK_SECRET");
 
     if (!sdkKey || !sdkSecret) {
       console.error("Missing ZOOM_SDK_KEY or ZOOM_SDK_SECRET");
       return new Response(
-        JSON.stringify({
-          error: "Zoom SDK credentials not configured. Please add ZOOM_SDK_KEY and ZOOM_SDK_SECRET in your project secrets.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Zoom SDK credentials not configured." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -40,24 +63,21 @@ serve(async (req) => {
     if (!meetingNumber) {
       return new Response(
         JSON.stringify({ error: "Meeting number is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Generate signature
     const iat = Math.round(Date.now() / 1000) - 30;
-    const exp = iat + 60 * 60 * 2; // 2 hours
+    const exp = iat + 60 * 60 * 2;
 
     const oHeader = { alg: "HS256", typ: "JWT" };
     const oPayload = {
-      sdkKey: sdkKey,
+      sdkKey,
       mn: meetingNumber,
-      role: role,
-      iat: iat,
-      exp: exp,
+      role,
+      iat,
+      exp,
       tokenExp: exp,
     };
 
@@ -80,26 +100,17 @@ serve(async (req) => {
 
     const jwtSignature = `${sHeader}.${sPayload}.${signature}`;
 
-    console.log("Generated Zoom signature for meeting:", meetingNumber);
+    console.log("Generated Zoom signature for meeting:", meetingNumber, "user:", userId);
 
     return new Response(
-      JSON.stringify({
-        signature: jwtSignature,
-        sdkKey: sdkKey,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ signature: jwtSignature, sdkKey }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error generating Zoom signature:", error);
     return new Response(
       JSON.stringify({ error: "Failed to generate meeting signature" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
