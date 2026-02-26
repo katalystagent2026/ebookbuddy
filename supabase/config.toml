@@ -1,1 +1,4 @@
 project_id = "hmzbpzlbnrpetqhjymhi"
+
+[functions.zoom-signature]
+verify_jwt = false
