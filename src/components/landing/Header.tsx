@@ -5,6 +5,7 @@ import { Book, Menu, X, Sparkles, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { StudentRegistrationDialog } from './StudentRegistrationDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -30,6 +32,8 @@ export function Header() {
   };
 
   return (
+    <>
+    <StudentRegistrationDialog open={registrationOpen} onOpenChange={setRegistrationOpen} />
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-md border-b border-border">
       <div className="safe-container">
         <div className="flex items-center justify-between h-16 md:h-20">
@@ -102,11 +106,9 @@ export function Header() {
                     {t.signIn}
                   </Button>
                 </Link>
-                <Link to="/signup">
-                  <Button variant="hero" size="default">
-                    {t.getStarted}
-                  </Button>
-                </Link>
+                <Button variant="hero" size="default" onClick={() => setRegistrationOpen(true)}>
+                  {t.getStarted}
+                </Button>
               </>
             )}
           </div>
@@ -160,11 +162,9 @@ export function Header() {
                         {t.signIn}
                       </Button>
                     </Link>
-                    <Link to="/signup" className="flex-1">
-                      <Button variant="hero" size="sm" className="w-full">
-                        {t.getStarted}
-                      </Button>
-                    </Link>
+                    <Button variant="hero" size="sm" className="flex-1" onClick={() => setRegistrationOpen(true)}>
+                      {t.getStarted}
+                    </Button>
                   </>
                 )}
               </div>
@@ -173,5 +173,6 @@ export function Header() {
         )}
       </div>
     </header>
+    </>
   );
 }
