@@ -1,8 +1,14 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Heart, ArrowRight } from 'lucide-react';
+import { StudentRegistrationDialog } from './StudentRegistrationDialog';
 
 export function CTA() {
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+
   return (
+    <>
+    <StudentRegistrationDialog open={registrationOpen} onOpenChange={setRegistrationOpen} />
     <section id="for-schools" className="py-20 md:py-28 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10">
       <div className="safe-container">
         <div className="relative">
@@ -32,7 +38,7 @@ export function CTA() {
 
                 {/* Dual CTAs */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <Button variant="hero" size="lg" className="group gentle-pulse">
+                  <Button variant="hero" size="lg" className="group gentle-pulse" onClick={() => setRegistrationOpen(true)}>
                     <BookOpen className="w-5 h-5" />
                     Start Reading
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -79,5 +85,6 @@ export function CTA() {
         </div>
       </div>
     </section>
+    </>
   );
 }
