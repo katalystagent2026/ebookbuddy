@@ -71,11 +71,30 @@ export default function AdminEbooks() {
     setLoading(false);
   };
 
+  const isValidUrl = (url: string): boolean => {
+    if (!url) return true; // Optional field
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     if (!editingEbook?.title) {
       toast({
         title: 'Title required',
         description: 'Please enter a title for the ebook.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (editingEbook.cover_url && !isValidUrl(editingEbook.cover_url)) {
+      toast({
+        title: 'Invalid cover URL',
+        description: 'Please enter a valid URL (e.g., https://example.com/image.jpg).',
         variant: 'destructive',
       });
       return;
