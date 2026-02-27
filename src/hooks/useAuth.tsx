@@ -19,6 +19,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getAuthRedirectBaseUrl = () => {
+  if (typeof window === 'undefined') return 'https://www.ebookbuddy.org';
+
+  const hostname = window.location.hostname;
+  if (hostname === 'www.ebookbuddy.org' || hostname === 'ebookbuddy.org') {
+    return 'https://www.ebookbuddy.org';
+  }
+
+  return window.location.origin;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -78,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${getAuthRedirectBaseUrl()}/auth/callback`,
         data: {
           full_name: fullName,
         },
@@ -104,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${getAuthRedirectBaseUrl()}/reset-password`,
     });
     return { error };
   };
