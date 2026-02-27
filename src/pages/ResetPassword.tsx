@@ -19,13 +19,77 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user has an active session (set by AuthCallback after recovery verification)
+    let isMounted = true;
+
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setHasSession(!!session);
-      setChecking(false);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const queryParams = new URLSearchParams(window.location.search);
+
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const tokenHash = queryParams.get('token_hash');
+      const type = hashParams.get('type') || queryParams.get('type');
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (!error && isMounted) {
+          setHasSession(true);
+          setChecking(false);
+          return;
+        }
+      }
+
+      if (tokenHash && type) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as 'email' | 'recovery' | 'invite' | 'magiclink' | 'signup' | 'email_change',
+        });
+
+        if (!error) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (isMounted) {
+            setHasSession(!!session);
+            setChecking(false);
+            return;
+          }
+        }
+      }
+
+      // Give auth state a short window to hydrate after redirect
+      let foundSession = false;
+      for (let i = 0; i < 10; i += 1) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          foundSession = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      if (isMounted) {
+        setHasSession(foundSession);
+        setChecking(false);
+      }
     };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (!isMounted) return;
+      if (session) {
+        setHasSession(true);
+        setChecking(false);
+      }
+    });
+
     checkSession();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
