@@ -43,11 +43,13 @@ export default function AuthCallback() {
             return;
           }
 
-          setStatus('success');
           if (type === 'recovery') {
-            setMessage('Password reset link verified! Redirecting...');
-            setTimeout(() => navigate('/reset-password'), 2000);
-          } else {
+            // Navigate immediately so session is still active for password update
+            navigate('/reset-password');
+            return;
+          }
+          setStatus('success');
+          if (type !== 'recovery') {
             setMessage('Email verified successfully! Redirecting to login...');
             setTimeout(() => navigate('/login'), 2000);
           }
@@ -67,14 +69,13 @@ export default function AuthCallback() {
             return;
           }
 
-          setStatus('success');
           if (type === 'recovery') {
-            setMessage('Redirecting to reset password...');
-            setTimeout(() => navigate('/reset-password'), 2000);
-          } else {
-            setMessage('Email verified successfully! Redirecting...');
-            setTimeout(() => navigate('/'), 2000);
+            navigate('/reset-password');
+            return;
           }
+          setStatus('success');
+          setMessage('Email verified successfully! Redirecting...');
+          setTimeout(() => navigate('/'), 2000);
           return;
         }
 

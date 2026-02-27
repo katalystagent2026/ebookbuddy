@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { KeyRound, Loader2, CheckCircle } from 'lucide-react';
+import { KeyRound, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,19 +12,20 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [success, setSuccess] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const { updatePassword } = useAuth();
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-      }
-    });
+    // Check if user has an active session (set by AuthCallback after recovery verification)
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setHasSession(!!session);
+      setChecking(false);
+    };
+    checkSession();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +51,7 @@ export default function ResetPassword() {
 
     setLoading(true);
 
-    const { error } = await updatePassword(password);
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
       toast({
@@ -61,6 +61,8 @@ export default function ResetPassword() {
       });
     } else {
       setSuccess(true);
+      // Sign out so user logs in with new password
+      await supabase.auth.signOut();
       toast({
         title: 'Password updated!',
         description: 'Your password has been successfully reset.',
@@ -70,14 +72,50 @@ export default function ResetPassword() {
     setLoading(false);
   };
 
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!hasSession && !success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-heading">Invalid or Expired Link</CardTitle>
+            <CardDescription className="text-base">
+              This password reset link is no longer valid. Please request a new one.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col gap-2">
+            <Button className="w-full" onClick={() => navigate('/forgot-password')}>
+              Request New Reset Link
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => navigate('/login')}>
+              Back to Login
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-forest/10 flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-forest" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-primary" />
               </div>
             </div>
             <CardTitle className="text-2xl font-heading">Password Updated!</CardTitle>
