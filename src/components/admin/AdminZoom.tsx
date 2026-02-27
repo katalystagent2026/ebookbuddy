@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,36 +9,72 @@ import { Video, Save, Loader2, ExternalLink, CheckCircle2, Copy } from 'lucide-r
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminZoom() {
-  const [meetingId, setMeetingId] = useState('885 0722 0856');
-  const [passcode, setPasscode] = useState('475217');
+  const [meetingId, setMeetingId] = useState('');
+  const [passcode, setPasscode] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleSave = () => {
-    setSaving(true);
-    // Settings are stored locally for now
-    localStorage.setItem('zoom_meeting_id', meetingId);
-    localStorage.setItem('zoom_passcode', passcode);
-    setTimeout(() => {
-      setSaving(false);
-      toast({
-        title: 'Zoom settings saved',
-        description: 'Meeting configuration has been updated.',
-      });
-    }, 500);
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    const { data, error } = await supabase
+      .from('zoom_config')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (!error && data) {
+      setMeetingId(data.meeting_id);
+      setPasscode(data.passcode);
+    }
+    setLoading(false);
   };
 
-  useEffect(() => {
-    const savedMeetingId = localStorage.getItem('zoom_meeting_id');
-    const savedPasscode = localStorage.getItem('zoom_passcode');
-    if (savedMeetingId) setMeetingId(savedMeetingId);
-    if (savedPasscode) setPasscode(savedPasscode);
-  }, []);
+  const handleSave = async () => {
+    setSaving(true);
+
+    const { data: existing } = await supabase
+      .from('zoom_config')
+      .select('id')
+      .limit(1)
+      .single();
+
+    let error;
+    if (existing) {
+      ({ error } = await supabase
+        .from('zoom_config')
+        .update({ meeting_id: meetingId, passcode, updated_at: new Date().toISOString() })
+        .eq('id', existing.id));
+    } else {
+      ({ error } = await supabase
+        .from('zoom_config')
+        .insert({ meeting_id: meetingId, passcode }));
+    }
+
+    setSaving(false);
+
+    if (error) {
+      toast({ title: 'Error saving', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Zoom settings saved', description: 'Meeting configuration has been updated.' });
+    }
+  };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: `${label} copied to clipboard` });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -102,11 +139,7 @@ export default function AdminZoom() {
                 onChange={(e) => setMeetingId(e.target.value)}
                 placeholder="123 456 7890"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => copyToClipboard(meetingId, 'Meeting ID')}
-              >
+              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(meetingId, 'Meeting ID')}>
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
@@ -121,11 +154,7 @@ export default function AdminZoom() {
                 onChange={(e) => setPasscode(e.target.value)}
                 placeholder="Meeting passcode"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => copyToClipboard(passcode, 'Passcode')}
-              >
+              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(passcode, 'Passcode')}>
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
