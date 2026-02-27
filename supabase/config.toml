@@ -2,3 +2,6 @@ project_id = "hmzbpzlbnrpetqhjymhi"
 
 [functions.zoom-signature]
 verify_jwt = false
+
+[functions.update-user-password]
+verify_jwt = false

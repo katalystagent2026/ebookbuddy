@@ -235,7 +235,7 @@ export default function AdminUsers() {
                         </div>
                         <Button
                           size="icon"
-                          variant="default"
+                          variant="outline"
                           onClick={() => handleSavePassword(profile.user_id)}
                           disabled={savingPassword}
                           className="h-8 w-8"
@@ -243,7 +243,7 @@ export default function AdminUsers() {
                           {savingPassword ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <Save className="w-4 h-4 text-primary" />
+                            <Save className="w-4 h-4" />
                           )}
                         </Button>
                         <Button

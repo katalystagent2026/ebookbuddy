@@ -9,6 +9,7 @@ import {
   BarChart3, 
   BookOpen, 
   Settings,
+  Video,
   LogOut,
   Menu,
   X
@@ -21,8 +22,9 @@ import AdminVolunteers from '@/components/admin/AdminVolunteers';
 import AdminStats from '@/components/admin/AdminStats';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
+import AdminZoom from '@/components/admin/AdminZoom';
 
-type TabId = 'users' | 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'settings';
+type TabId = 'users' | 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
 
 const tabs = [
   { id: 'users' as TabId, label: 'Users', icon: Users },
@@ -31,6 +33,7 @@ const tabs = [
   { id: 'volunteers' as TabId, label: 'Volunteers', icon: Heart },
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
+  { id: 'zoom' as TabId, label: 'Zoom', icon: Video },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
 
@@ -53,6 +56,8 @@ export default function AdminDashboard() {
         return <AdminStats />;
       case 'ebooks':
         return <AdminEbooks />;
+      case 'zoom':
+        return <AdminZoom />;
       case 'settings':
         return <AdminSettings />;
       default:

@@ -3,11 +3,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -17,13 +16,18 @@ serve(async (req) => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Create client with user's token to verify they're an admin
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Get the calling user
     const { data: { user: callingUser }, error: authError } = await userClient.auth.getUser();
     if (authError || !callingUser) {
       return new Response(
@@ -32,7 +36,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if the calling user is an admin using the has_role function
     const { data: isAdmin, error: roleError } = await userClient.rpc("has_role", {
       _user_id: callingUser.id,
       _role: "admin",
@@ -45,7 +48,6 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
     const { userId, newPassword } = await req.json();
 
     if (!userId || !newPassword) {
@@ -55,7 +57,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate password length
     if (newPassword.length < 6) {
       return new Response(
         JSON.stringify({ error: "Password must be at least 6 characters" }),
@@ -63,12 +64,10 @@ serve(async (req) => {
       );
     }
 
-    // Create admin client to update password
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Update the user's password
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
