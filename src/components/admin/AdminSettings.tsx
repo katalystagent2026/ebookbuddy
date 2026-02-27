@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Shield, Bell, Palette } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Shield, Bell, Palette, Construction } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminSettings() {
   return (
@@ -11,39 +10,19 @@ export default function AdminSettings() {
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
             Security Settings
+            <Badge variant="secondary" className="ml-2 gap-1">
+              <Construction className="w-3 h-3" />
+              Coming Soon
+            </Badge>
           </CardTitle>
           <CardDescription>
-            Configure security options for the platform
+            Security configuration options will be available in a future update.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Require Email Verification</Label>
-              <p className="text-sm text-muted-foreground">
-                Users must verify their email before accessing the platform
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Require Guardian Approval for Students</Label>
-              <p className="text-sm text-muted-foreground">
-                Student accounts require guardian approval before activation
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Volunteer Background Check Required</Label>
-              <p className="text-sm text-muted-foreground">
-                Volunteers must complete verification before being matched
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>• Require email verification before platform access</p>
+          <p>• Require guardian approval for student accounts</p>
+          <p>• Require volunteer background checks before matching</p>
         </CardContent>
       </Card>
 
@@ -52,30 +31,18 @@ export default function AdminSettings() {
           <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             Notification Settings
+            <Badge variant="secondary" className="ml-2 gap-1">
+              <Construction className="w-3 h-3" />
+              Coming Soon
+            </Badge>
           </CardTitle>
           <CardDescription>
-            Configure email notifications
+            Email notification preferences will be configurable in a future update.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>New Registration Alerts</Label>
-              <p className="text-sm text-muted-foreground">
-                Receive email when new users register
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Weekly Summary Reports</Label>
-              <p className="text-sm text-muted-foreground">
-                Receive weekly platform activity summaries
-              </p>
-            </div>
-            <Switch />
-          </div>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>• New registration email alerts</p>
+          <p>• Weekly summary reports</p>
         </CardContent>
       </Card>
 
@@ -84,30 +51,18 @@ export default function AdminSettings() {
           <CardTitle className="flex items-center gap-2">
             <Palette className="w-5 h-5" />
             Platform Settings
+            <Badge variant="secondary" className="ml-2 gap-1">
+              <Construction className="w-3 h-3" />
+              Coming Soon
+            </Badge>
           </CardTitle>
           <CardDescription>
-            General platform configuration
+            General platform configuration will be available in a future update.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Maintenance Mode</Label>
-              <p className="text-sm text-muted-foreground">
-                Temporarily disable access for non-admin users
-              </p>
-            </div>
-            <Switch />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Allow New Registrations</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable or disable new user signups
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>• Maintenance mode</p>
+          <p>• Registration toggle</p>
         </CardContent>
       </Card>
     </div>
