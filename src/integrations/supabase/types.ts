@@ -158,6 +158,30 @@ export type Database = {
         }
         Relationships: []
       }
+      zoom_config: {
+        Row: {
+          id: string
+          meeting_id: string
+          passcode: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          meeting_id?: string
+          passcode?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          meeting_id?: string
+          passcode?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
