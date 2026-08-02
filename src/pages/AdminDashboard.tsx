@@ -11,7 +11,9 @@ import {
   Video,
   LogOut,
   Menu,
-  X
+  X,
+  Users,
+  KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminRegistrations from '@/components/admin/AdminRegistrations';
@@ -21,8 +23,10 @@ import AdminStats from '@/components/admin/AdminStats';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
+import AdminLogin from '@/components/admin/AdminLogin';
+import AdminApi from '@/components/admin/AdminApi';
 
-type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
+type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'login' | 'api' | 'settings';
 
 const tabs = [
   { id: 'registrations' as TabId, label: 'Registrations', icon: ClipboardList },
@@ -31,8 +35,11 @@ const tabs = [
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
   { id: 'zoom' as TabId, label: 'Zoom Setup', icon: Video },
+  { id: 'login' as TabId, label: 'Login', icon: Users },
+  { id: 'api' as TabId, label: 'API', icon: KeyRound },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
+
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabId>('registrations');
@@ -54,8 +61,13 @@ export default function AdminDashboard() {
         return <AdminEbooks />;
       case 'zoom':
         return <AdminZoom />;
+      case 'login':
+        return <AdminLogin />;
+      case 'api':
+        return <AdminApi />;
       case 'settings':
         return <AdminSettings />;
+
       default:
         return <AdminRegistrations />;
     }

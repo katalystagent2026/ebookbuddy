@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_credentials: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key_value: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_value?: string
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_value?: string
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ebooks: {
         Row: {
           author: string | null
