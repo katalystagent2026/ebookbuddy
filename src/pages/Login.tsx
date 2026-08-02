@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -29,11 +30,26 @@ export default function Login() {
         variant: 'destructive',
       });
     } else {
+      const { data: userData } = await supabase.auth.getUser();
+      let isAdminUser = false;
+
+      if (userData.user) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        isAdminUser = !!roleRow;
+      }
+
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
+        title: isAdminUser ? 'Welcome back, Admin!' : 'Welcome back!',
+        description: isAdminUser
+          ? 'Admin access granted — opening the admin dashboard.'
+          : 'You have successfully logged in.',
       });
-      navigate('/dashboard');
+      navigate(isAdminUser ? '/admin' : '/dashboard');
     }
 
     setLoading(false);
