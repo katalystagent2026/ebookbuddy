@@ -61,8 +61,13 @@ export default function AdminDashboard() {
         return <AdminEbooks />;
       case 'zoom':
         return <AdminZoom />;
+      case 'login':
+        return <AdminLogin />;
+      case 'api':
+        return <AdminApi />;
       case 'settings':
         return <AdminSettings />;
+
       default:
         return <AdminRegistrations />;
     }
