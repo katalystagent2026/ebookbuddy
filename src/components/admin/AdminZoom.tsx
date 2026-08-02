@@ -191,8 +191,6 @@ export default function AdminZoom() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Client ID (SDK Key)</TableHead>
-                  <TableHead>Client Secret</TableHead>
                   <TableHead>Meeting ID</TableHead>
                   <TableHead>Passcode</TableHead>
                   <TableHead>Status</TableHead>
@@ -203,12 +201,6 @@ export default function AdminZoom() {
                 {accounts.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell className="font-medium">{account.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {account.sdk_key ? `${account.sdk_key.slice(0, 6)}••••` : '—'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {account.sdk_secret ? '••••••••' : '—'}
-                    </TableCell>
                     <TableCell>{account.meeting_id || '—'}</TableCell>
                     <TableCell>{account.passcode ? '••••' : '—'}</TableCell>
                     <TableCell>
@@ -230,7 +222,7 @@ export default function AdminZoom() {
                 ))}
                 {accounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No Zoom setups yet
                     </TableCell>
                   </TableRow>
