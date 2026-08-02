@@ -44,8 +44,8 @@ serve(async (req) => {
       );
     }
 
-    const userId = data.claims.sub;
-    console.log("Authenticated user requesting Zoom signature:", userId);
+    // Caller is authenticated; avoid logging identifying user data.
+
 
     const sdkKey = Deno.env.get("ZOOM_SDK_KEY");
     const sdkSecret = Deno.env.get("ZOOM_SDK_SECRET");
@@ -100,7 +100,7 @@ serve(async (req) => {
 
     const jwtSignature = `${sHeader}.${sPayload}.${signature}`;
 
-    console.log("Generated Zoom signature for meeting:", meetingNumber, "user:", userId);
+    console.log("Zoom signature generated successfully");
 
     return new Response(
       JSON.stringify({ signature: jwtSignature, sdkKey }),
