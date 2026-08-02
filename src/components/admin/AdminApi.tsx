@@ -66,9 +66,20 @@ export default function AdminApi() {
 
   const openEdit = (item: ApiCredential) => {
     setEditing(item);
-    setForm({ name: item.name, type: item.type ?? '', key_value: item.key_value ?? '' });
+    setForm({ name: item.name, rows: [{ type: item.type ?? '', key_value: item.key_value ?? '' }] });
     setDialogOpen(true);
   };
+
+  const updateRow = (index: number, patch: Partial<CredentialRow>) => {
+    setForm((prev) => ({
+      ...prev,
+      rows: prev.rows.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+    }));
+  };
+
+  const addRow = () => setForm((prev) => ({ ...prev, rows: [...prev.rows, { type: '', key_value: '' }] }));
+  const removeRow = (index: number) =>
+    setForm((prev) => ({ ...prev, rows: prev.rows.filter((_, i) => i !== index) }));
 
   const handleSave = async () => {
     const name = form.name.trim();
@@ -76,15 +87,30 @@ export default function AdminApi() {
       toast({ title: 'Name is required', variant: 'destructive' });
       return;
     }
+    const rows = form.rows
+      .map((r) => ({
+        name: name.slice(0, 120),
+        type: r.type.trim().slice(0, 60),
+        key_value: r.key_value.trim(),
+      }))
+      .filter((r) => r.type || r.key_value);
+
+    if (rows.length === 0) {
+      toast({ title: 'Add at least one type or key/token', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
-    const payload = {
-      name: name.slice(0, 120),
-      type: form.type.trim().slice(0, 60),
-      key_value: form.key_value.trim(),
-    };
-    const { error } = editing
-      ? await supabase.from('api_credentials').update(payload).eq('id', editing.id)
-      : await supabase.from('api_credentials').insert(payload);
+    let error = null;
+    if (editing) {
+      const [first, ...rest] = rows;
+      ({ error } = await supabase.from('api_credentials').update(first).eq('id', editing.id));
+      if (!error && rest.length) {
+        ({ error } = await supabase.from('api_credentials').insert(rest));
+      }
+    } else {
+      ({ error } = await supabase.from('api_credentials').insert(rows));
+    }
     setSaving(false);
     if (error) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
@@ -94,6 +120,7 @@ export default function AdminApi() {
     setDialogOpen(false);
     fetchItems();
   };
+
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
