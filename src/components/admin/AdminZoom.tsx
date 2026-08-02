@@ -246,7 +246,7 @@ export default function AdminZoom() {
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Zoom Setup' : 'Add Zoom Setup'}</DialogTitle>
             <DialogDescription>
-              Credentials come from your Zoom App Marketplace Meeting SDK app.
+              Meeting details used by the reading room.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
