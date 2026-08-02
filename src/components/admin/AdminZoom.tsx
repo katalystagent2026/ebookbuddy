@@ -19,8 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 interface ZoomAccount {
   id: string;
   name: string;
-  sdk_key: string;
-  sdk_secret: string;
   meeting_id: string;
   passcode: string;
   is_active: boolean;
@@ -29,8 +27,6 @@ interface ZoomAccount {
 
 const emptyForm = {
   name: '',
-  sdk_key: '',
-  sdk_secret: '',
   meeting_id: '',
   passcode: '',
   is_active: true,
@@ -43,7 +39,6 @@ export default function AdminZoom() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const [showSecret, setShowSecret] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { toast } = useToast();
 
