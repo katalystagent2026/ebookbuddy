@@ -23,10 +23,8 @@ import AdminStats from '@/components/admin/AdminStats';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
-import AdminLogin from '@/components/admin/AdminLogin';
-import AdminApi from '@/components/admin/AdminApi';
 
-type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'login' | 'api' | 'settings';
+type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
 
 const tabs = [
   { id: 'registrations' as TabId, label: 'Registrations', icon: ClipboardList },
