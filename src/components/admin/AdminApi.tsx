@@ -25,7 +25,8 @@ interface ApiCredential {
   created_at: string;
 }
 
-const emptyForm = { name: '', type: '', key_value: '' };
+interface CredentialRow { type: string; key_value: string }
+const emptyForm = { name: '', rows: [{ type: '', key_value: '' }, { type: '', key_value: '' }] as CredentialRow[] };
 
 export default function AdminApi() {
   const [items, setItems] = useState<ApiCredential[]>([]);
