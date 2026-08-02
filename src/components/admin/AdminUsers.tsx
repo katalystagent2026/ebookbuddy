@@ -166,6 +166,56 @@ export default function AdminUsers() {
     setShowPassword(false);
   };
 
+  const openEditUser = (profile: Profile) => {
+    setEditUser(profile);
+    setEditForm({ full_name: profile.full_name || '', email: profile.email });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editUser) return;
+    setSavingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+        body: {
+          action: 'update',
+          userId: editUser.user_id,
+          fullName: editForm.full_name,
+          email: editForm.email,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User updated' });
+      setEditUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({ title: 'Error updating user', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+        body: { action: 'delete', userId: deleteUser.user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User deleted' });
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({ title: 'Error deleting user', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
+
   const filteredProfiles = profiles.filter(profile => 
     profile.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
