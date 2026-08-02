@@ -31,6 +31,27 @@ const MeetingRoom = () => {
     }
   }, [user]);
 
+  // Load meeting credentials from the protected config table (auth required by RLS)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("zoom_config")
+        .select("meeting_id, passcode")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setMeetingId(data.meeting_id ?? "");
+      setPasscode(data.passcode ?? "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+
   useEffect(() => {
     // Pre-load the Zoom SDK
     const loadZoomSdk = async () => {
