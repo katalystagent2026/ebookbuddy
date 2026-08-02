@@ -35,8 +35,6 @@ const tabs = [
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
   { id: 'zoom' as TabId, label: 'Zoom Setup', icon: Video },
-  { id: 'login' as TabId, label: 'Login', icon: Users },
-  { id: 'api' as TabId, label: 'API', icon: KeyRound },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
 
