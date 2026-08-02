@@ -259,35 +259,6 @@ export default function AdminZoom() {
                 placeholder="Reading Room Main"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="zoom-key">Client ID (SDK Key)</Label>
-              <Input
-                id="zoom-key"
-                value={form.sdk_key}
-                onChange={(e) => setForm({ ...form, sdk_key: e.target.value })}
-                placeholder="SDK Key"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zoom-secret">Client Secret (SDK Secret)</Label>
-              <div className="relative">
-                <Input
-                  id="zoom-secret"
-                  type={showSecret ? 'text' : 'password'}
-                  value={form.sdk_secret}
-                  onChange={(e) => setForm({ ...form, sdk_secret: e.target.value })}
-                  placeholder="SDK Secret"
-                  className="pr-9"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="zoom-meeting">Meeting ID</Label>
