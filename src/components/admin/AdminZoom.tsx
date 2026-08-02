@@ -96,8 +96,6 @@ export default function AdminZoom() {
 
     const payload = {
       name: form.name.trim(),
-      sdk_key: form.sdk_key.trim(),
-      sdk_secret: form.sdk_secret.trim(),
       meeting_id: form.meeting_id.replace(/\s/g, ''),
       passcode: form.passcode.trim(),
       is_active: form.is_active,
