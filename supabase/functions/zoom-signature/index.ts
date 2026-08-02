@@ -116,12 +116,13 @@ serve(async (req) => {
     const oHeader = { alg: "HS256", typ: "JWT" };
     const oPayload = {
       sdkKey,
-      mn: meetingNumber,
-      role,
+      mn: requestedMeeting,
+      role: effectiveRole,
       iat,
       exp,
       tokenExp: exp,
     };
+
 
     const sHeader = btoa(JSON.stringify(oHeader))
       .replace(/\+/g, "-")
