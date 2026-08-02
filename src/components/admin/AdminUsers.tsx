@@ -339,21 +339,30 @@ export default function AdminUsers() {
                     {new Date(profile.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={roles[profile.user_id] || 'user'}
-                      onValueChange={(value) => updateUserRole(profile.user_id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="volunteer">Volunteer</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={roles[profile.user_id] || 'user'}
+                        onValueChange={(value) => updateUserRole(profile.user_id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="volunteer">Volunteer</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" onClick={() => openEditUser(profile)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteUser(profile)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
+
                 </TableRow>
               ))}
               {filteredProfiles.length === 0 && (
