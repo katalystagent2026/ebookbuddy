@@ -12,8 +12,6 @@ import {
   LogOut,
   Menu,
   X,
-  Users,
-  KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminRegistrations from '@/components/admin/AdminRegistrations';
