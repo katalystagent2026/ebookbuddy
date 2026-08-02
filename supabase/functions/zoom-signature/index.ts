@@ -100,7 +100,7 @@ serve(async (req) => {
 
     const jwtSignature = `${sHeader}.${sPayload}.${signature}`;
 
-    console.log("Generated Zoom signature for meeting:", meetingNumber, "user:", userId);
+    console.log("Zoom signature generated successfully");
 
     return new Response(
       JSON.stringify({ signature: jwtSignature, sdkKey }),
