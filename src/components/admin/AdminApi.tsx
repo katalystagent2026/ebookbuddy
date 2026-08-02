@@ -25,7 +25,8 @@ interface ApiCredential {
   created_at: string;
 }
 
-const emptyForm = { name: '', type: '', key_value: '' };
+interface CredentialRow { type: string; key_value: string }
+const emptyForm = { name: '', rows: [{ type: '', key_value: '' }, { type: '', key_value: '' }] as CredentialRow[] };
 
 export default function AdminApi() {
   const [items, setItems] = useState<ApiCredential[]>([]);
@@ -65,9 +66,20 @@ export default function AdminApi() {
 
   const openEdit = (item: ApiCredential) => {
     setEditing(item);
-    setForm({ name: item.name, type: item.type ?? '', key_value: item.key_value ?? '' });
+    setForm({ name: item.name, rows: [{ type: item.type ?? '', key_value: item.key_value ?? '' }] });
     setDialogOpen(true);
   };
+
+  const updateRow = (index: number, patch: Partial<CredentialRow>) => {
+    setForm((prev) => ({
+      ...prev,
+      rows: prev.rows.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+    }));
+  };
+
+  const addRow = () => setForm((prev) => ({ ...prev, rows: [...prev.rows, { type: '', key_value: '' }] }));
+  const removeRow = (index: number) =>
+    setForm((prev) => ({ ...prev, rows: prev.rows.filter((_, i) => i !== index) }));
 
   const handleSave = async () => {
     const name = form.name.trim();
@@ -75,15 +87,30 @@ export default function AdminApi() {
       toast({ title: 'Name is required', variant: 'destructive' });
       return;
     }
+    const rows = form.rows
+      .map((r) => ({
+        name: name.slice(0, 120),
+        type: r.type.trim().slice(0, 60),
+        key_value: r.key_value.trim(),
+      }))
+      .filter((r) => r.type || r.key_value);
+
+    if (rows.length === 0) {
+      toast({ title: 'Add at least one type or key/token', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
-    const payload = {
-      name: name.slice(0, 120),
-      type: form.type.trim().slice(0, 60),
-      key_value: form.key_value.trim(),
-    };
-    const { error } = editing
-      ? await supabase.from('api_credentials').update(payload).eq('id', editing.id)
-      : await supabase.from('api_credentials').insert(payload);
+    let error = null;
+    if (editing) {
+      const [first, ...rest] = rows;
+      ({ error } = await supabase.from('api_credentials').update(first).eq('id', editing.id));
+      if (!error && rest.length) {
+        ({ error } = await supabase.from('api_credentials').insert(rest));
+      }
+    } else {
+      ({ error } = await supabase.from('api_credentials').insert(rows));
+    }
     setSaving(false);
     if (error) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
@@ -93,6 +120,7 @@ export default function AdminApi() {
     setDialogOpen(false);
     fetchItems();
   };
+
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -213,25 +241,45 @@ export default function AdminApi() {
                 placeholder="e.g. OpenAI Production"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-type">Type</Label>
-              <Input
-                id="api-type"
-                value={form.type}
-                maxLength={60}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                placeholder="e.g. API key, Bearer token, OAuth"
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3">
+                <Label className="text-xs text-muted-foreground">Type</Label>
+                <Label className="text-xs text-muted-foreground">Key / Token</Label>
+                <span className="w-8" />
+              </div>
+              {form.rows.map((row, index) => (
+                <div key={index} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3 items-center">
+                  <Input
+                    value={row.type}
+                    maxLength={60}
+                    onChange={(e) => updateRow(index, { type: e.target.value })}
+                    placeholder="API key"
+                    aria-label={`Type ${index + 1}`}
+                  />
+                  <Input
+                    value={row.key_value}
+                    onChange={(e) => updateRow(index, { key_value: e.target.value })}
+                    placeholder="Paste the key or token"
+                    aria-label={`Key or token ${index + 1}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground"
+                    aria-label={`Remove row ${index + 1}`}
+                    disabled={form.rows.length === 1}
+                    onClick={() => removeRow(index)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addRow}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add row
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">Key / Token</Label>
-              <Input
-                id="api-key"
-                value={form.key_value}
-                onChange={(e) => setForm({ ...form, key_value: e.target.value })}
-                placeholder="Paste the key or token"
-              />
-            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

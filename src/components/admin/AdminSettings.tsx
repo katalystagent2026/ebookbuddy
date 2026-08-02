@@ -1,14 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Bell, Palette, Construction } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AdminLogin from '@/components/admin/AdminLogin';
+import AdminApi from '@/components/admin/AdminApi';
 
 export default function AdminSettings() {
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="general" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="general">General</TabsTrigger>
+        <TabsTrigger value="login">Login</TabsTrigger>
+        <TabsTrigger value="api">API</TabsTrigger>
+      </TabsList>
 
+      <TabsContent value="login">
+        <AdminLogin />
+      </TabsContent>
 
+      <TabsContent value="api">
+        <AdminApi />
+      </TabsContent>
 
+      <TabsContent value="general" className="space-y-6">
       <Card>
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
@@ -68,6 +84,7 @@ export default function AdminSettings() {
           <p>• Registration toggle</p>
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
