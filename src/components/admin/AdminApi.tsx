@@ -16,24 +16,31 @@ import {
 import { Loader2, Plus, Pencil, Trash2, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+interface CredentialEntry {
+  id: string;
+  credential_id: string;
+  type: string;
+  key_value: string;
+}
+
 interface ApiCredential {
   id: string;
   name: string;
-  type: string;
-  key_value: string;
   is_active: boolean;
   created_at: string;
+  entries: CredentialEntry[];
 }
 
-interface CredentialRow { type: string; key_value: string }
-const emptyForm = { name: '', rows: [{ type: '', key_value: '' }, { type: '', key_value: '' }] as CredentialRow[] };
+interface CredentialRow { id?: string; type: string; key_value: string }
+const emptyRows = (): CredentialRow[] => [{ type: '', key_value: '' }, { type: '', key_value: '' }];
 
 export default function AdminApi() {
   const [items, setItems] = useState<ApiCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ApiCredential | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<{ name: string; rows: CredentialRow[] }>({ name: '', rows: emptyRows() });
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ApiCredential | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -42,14 +49,22 @@ export default function AdminApi() {
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('api_credentials')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) {
-      toast({ title: 'Could not load API credentials', description: error.message, variant: 'destructive' });
+    const [{ data: creds, error }, { data: entries, error: entriesError }] = await Promise.all([
+      supabase.from('api_credentials').select('*').order('created_at', { ascending: false }),
+      supabase.from('api_credential_entries').select('*').order('created_at', { ascending: true }),
+    ]);
+    const err = error || entriesError;
+    if (err) {
+      toast({ title: 'Could not load API credentials', description: err.message, variant: 'destructive' });
     } else {
-      setItems((data ?? []) as ApiCredential[]);
+      const grouped = (creds ?? []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        is_active: c.is_active,
+        created_at: c.created_at,
+        entries: ((entries ?? []) as CredentialEntry[]).filter((e) => e.credential_id === c.id),
+      }));
+      setItems(grouped);
     }
     setLoading(false);
   };
@@ -60,13 +75,20 @@ export default function AdminApi() {
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setRemovedIds([]);
+    setForm({ name: '', rows: emptyRows() });
     setDialogOpen(true);
   };
 
   const openEdit = (item: ApiCredential) => {
     setEditing(item);
-    setForm({ name: item.name, rows: [{ type: item.type ?? '', key_value: item.key_value ?? '' }] });
+    setRemovedIds([]);
+    setForm({
+      name: item.name,
+      rows: item.entries.length
+        ? item.entries.map((e) => ({ id: e.id, type: e.type ?? '', key_value: e.key_value ?? '' }))
+        : emptyRows(),
+    });
     setDialogOpen(true);
   };
 
@@ -78,8 +100,13 @@ export default function AdminApi() {
   };
 
   const addRow = () => setForm((prev) => ({ ...prev, rows: [...prev.rows, { type: '', key_value: '' }] }));
-  const removeRow = (index: number) =>
-    setForm((prev) => ({ ...prev, rows: prev.rows.filter((_, i) => i !== index) }));
+  const removeRow = (index: number) => {
+    setForm((prev) => {
+      const row = prev.rows[index];
+      if (row?.id) setRemovedIds((ids) => [...ids, row.id!]);
+      return { ...prev, rows: prev.rows.filter((_, i) => i !== index) };
+    });
+  };
 
   const handleSave = async () => {
     const name = form.name.trim();
@@ -88,11 +115,7 @@ export default function AdminApi() {
       return;
     }
     const rows = form.rows
-      .map((r) => ({
-        name: name.slice(0, 120),
-        type: r.type.trim().slice(0, 60),
-        key_value: r.key_value.trim(),
-      }))
+      .map((r) => ({ id: r.id, type: r.type.trim().slice(0, 60), key_value: r.key_value.trim() }))
       .filter((r) => r.type || r.key_value);
 
     if (rows.length === 0) {
@@ -101,26 +124,55 @@ export default function AdminApi() {
     }
 
     setSaving(true);
-    let error = null;
-    if (editing) {
-      const [first, ...rest] = rows;
-      ({ error } = await supabase.from('api_credentials').update(first).eq('id', editing.id));
-      if (!error && rest.length) {
-        ({ error } = await supabase.from('api_credentials').insert(rest));
+    try {
+      let credentialId = editing?.id;
+      if (editing) {
+        const { error } = await supabase
+          .from('api_credentials')
+          .update({ name: name.slice(0, 120) })
+          .eq('id', editing.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from('api_credentials')
+          .insert({ name: name.slice(0, 120) })
+          .select('id')
+          .single();
+        if (error) throw error;
+        credentialId = data.id;
       }
-    } else {
-      ({ error } = await supabase.from('api_credentials').insert(rows));
-    }
-    setSaving(false);
-    if (error) {
-      toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
-      return;
-    }
-    toast({ title: editing ? 'Credential updated' : 'Credential added' });
-    setDialogOpen(false);
-    fetchItems();
-  };
 
+      if (removedIds.length) {
+        const { error } = await supabase.from('api_credential_entries').delete().in('id', removedIds);
+        if (error) throw error;
+      }
+
+      const updates = rows.filter((r) => r.id);
+      for (const r of updates) {
+        const { error } = await supabase
+          .from('api_credential_entries')
+          .update({ type: r.type, key_value: r.key_value })
+          .eq('id', r.id!);
+        if (error) throw error;
+      }
+
+      const inserts = rows
+        .filter((r) => !r.id)
+        .map((r) => ({ credential_id: credentialId!, type: r.type, key_value: r.key_value }));
+      if (inserts.length) {
+        const { error } = await supabase.from('api_credential_entries').insert(inserts);
+        if (error) throw error;
+      }
+
+      toast({ title: editing ? 'Credential updated' : 'Credential added' });
+      setDialogOpen(false);
+      fetchItems();
+    } catch (e: any) {
+      toast({ title: 'Save failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -148,7 +200,7 @@ export default function AdminApi() {
               API Credentials
             </CardTitle>
             <CardDescription>
-              Store and manage API keys and tokens used by the platform.
+              Each name is one record that groups all of its types and keys/tokens.
             </CardDescription>
           </div>
           <Button onClick={openNew}>
@@ -171,35 +223,44 @@ export default function AdminApi() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Key / Token</TableHead>
+                    <TableHead>Types &amp; Keys / Tokens</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.id} className="align-top">
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell>
-                        {item.type ? <Badge variant="secondary">{item.type}</Badge> : '—'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate max-w-[220px]">
-                            {revealed[item.id] ? item.key_value || '—' : mask(item.key_value)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            aria-label={revealed[item.id] ? 'Hide key' : 'Show key'}
-                            onClick={() =>
-                              setRevealed((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-                            }
-                          >
-                            {revealed[item.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </Button>
-                        </div>
+                        {item.entries.length === 0 ? (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {item.entries.map((entry) => (
+                              <div key={entry.id} className="flex items-center gap-2">
+                                {entry.type ? (
+                                  <Badge variant="secondary">{entry.type}</Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">no type</span>
+                                )}
+                                <span className="font-mono text-xs truncate max-w-[220px]">
+                                  {revealed[entry.id] ? entry.key_value || '—' : mask(entry.key_value)}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  aria-label={revealed[entry.id] ? 'Hide key' : 'Show key'}
+                                  onClick={() =>
+                                    setRevealed((prev) => ({ ...prev, [entry.id]: !prev[entry.id] }))
+                                  }
+                                >
+                                  {revealed[entry.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => openEdit(item)}>
@@ -228,7 +289,9 @@ export default function AdminApi() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit credential' : 'Add credential'}</DialogTitle>
-            <DialogDescription>Name, type and the key or token value.</DialogDescription>
+            <DialogDescription>
+              One name holds all the type and key/token pairs listed below.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -248,7 +311,7 @@ export default function AdminApi() {
                 <span className="w-8" />
               </div>
               {form.rows.map((row, index) => (
-                <div key={index} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3 items-center">
+                <div key={row.id ?? index} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3 items-center">
                   <Input
                     value={row.type}
                     maxLength={60}
@@ -279,7 +342,6 @@ export default function AdminApi() {
                 Add row
               </Button>
             </div>
-
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -296,7 +358,7 @@ export default function AdminApi() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete credential?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{deleteTarget?.name}" will be permanently removed.
+              "{deleteTarget?.name}" and all of its types and keys/tokens will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
