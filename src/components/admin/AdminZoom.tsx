@@ -13,14 +13,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Video, Loader2, Plus, Pencil, Trash2, Eye, EyeOff, Terminal } from 'lucide-react';
+import { Video, Loader2, Plus, Pencil, Trash2, Terminal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ZoomAccount {
   id: string;
   name: string;
-  sdk_key: string;
-  sdk_secret: string;
   meeting_id: string;
   passcode: string;
   is_active: boolean;
@@ -29,8 +27,6 @@ interface ZoomAccount {
 
 const emptyForm = {
   name: '',
-  sdk_key: '',
-  sdk_secret: '',
   meeting_id: '',
   passcode: '',
   is_active: true,
@@ -43,7 +39,6 @@ export default function AdminZoom() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const [showSecret, setShowSecret] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -69,7 +64,6 @@ export default function AdminZoom() {
   const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm });
-    setShowSecret(false);
     setDialogOpen(true);
   };
 
@@ -77,13 +71,10 @@ export default function AdminZoom() {
     setEditingId(account.id);
     setForm({
       name: account.name,
-      sdk_key: account.sdk_key,
-      sdk_secret: account.sdk_secret,
       meeting_id: account.meeting_id,
       passcode: account.passcode,
       is_active: account.is_active,
     });
-    setShowSecret(false);
     setDialogOpen(true);
   };
 
@@ -96,8 +87,6 @@ export default function AdminZoom() {
 
     const payload = {
       name: form.name.trim(),
-      sdk_key: form.sdk_key.trim(),
-      sdk_secret: form.sdk_secret.trim(),
       meeting_id: form.meeting_id.replace(/\s/g, ''),
       passcode: form.passcode.trim(),
       is_active: form.is_active,
@@ -172,7 +161,7 @@ export default function AdminZoom() {
                 Zoom Setup ({accounts.length})
               </CardTitle>
               <CardDescription className="mt-1">
-                Add, edit, or remove Zoom app credentials and meeting details.
+                Add, edit, or remove Zoom meeting details.
               </CardDescription>
             </div>
             <Button onClick={openCreate}>
@@ -191,8 +180,6 @@ export default function AdminZoom() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Client ID (SDK Key)</TableHead>
-                  <TableHead>Client Secret</TableHead>
                   <TableHead>Meeting ID</TableHead>
                   <TableHead>Passcode</TableHead>
                   <TableHead>Status</TableHead>
@@ -203,12 +190,6 @@ export default function AdminZoom() {
                 {accounts.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell className="font-medium">{account.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {account.sdk_key ? `${account.sdk_key.slice(0, 6)}••••` : '—'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {account.sdk_secret ? '••••••••' : '—'}
-                    </TableCell>
                     <TableCell>{account.meeting_id || '—'}</TableCell>
                     <TableCell>{account.passcode ? '••••' : '—'}</TableCell>
                     <TableCell>
@@ -230,7 +211,7 @@ export default function AdminZoom() {
                 ))}
                 {accounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No Zoom setups yet
                     </TableCell>
                   </TableRow>
@@ -246,7 +227,7 @@ export default function AdminZoom() {
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Zoom Setup' : 'Add Zoom Setup'}</DialogTitle>
             <DialogDescription>
-              Credentials come from your Zoom App Marketplace Meeting SDK app.
+              Meeting details used by the reading room.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -258,35 +239,6 @@ export default function AdminZoom() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Reading Room Main"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zoom-key">Client ID (SDK Key)</Label>
-              <Input
-                id="zoom-key"
-                value={form.sdk_key}
-                onChange={(e) => setForm({ ...form, sdk_key: e.target.value })}
-                placeholder="SDK Key"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zoom-secret">Client Secret (SDK Secret)</Label>
-              <div className="relative">
-                <Input
-                  id="zoom-secret"
-                  type={showSecret ? 'text' : 'password'}
-                  value={form.sdk_secret}
-                  onChange={(e) => setForm({ ...form, sdk_secret: e.target.value })}
-                  placeholder="SDK Secret"
-                  className="pr-9"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
