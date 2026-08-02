@@ -241,25 +241,45 @@ export default function AdminApi() {
                 placeholder="e.g. OpenAI Production"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-type">Type</Label>
-              <Input
-                id="api-type"
-                value={form.type}
-                maxLength={60}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                placeholder="e.g. API key, Bearer token, OAuth"
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3">
+                <Label className="text-xs text-muted-foreground">Type</Label>
+                <Label className="text-xs text-muted-foreground">Key / Token</Label>
+                <span className="w-8" />
+              </div>
+              {form.rows.map((row, index) => (
+                <div key={index} className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto] gap-3 items-center">
+                  <Input
+                    value={row.type}
+                    maxLength={60}
+                    onChange={(e) => updateRow(index, { type: e.target.value })}
+                    placeholder="API key"
+                    aria-label={`Type ${index + 1}`}
+                  />
+                  <Input
+                    value={row.key_value}
+                    onChange={(e) => updateRow(index, { key_value: e.target.value })}
+                    placeholder="Paste the key or token"
+                    aria-label={`Key or token ${index + 1}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground"
+                    aria-label={`Remove row ${index + 1}`}
+                    disabled={form.rows.length === 1}
+                    onClick={() => removeRow(index)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addRow}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add row
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">Key / Token</Label>
-              <Input
-                id="api-key"
-                value={form.key_value}
-                onChange={(e) => setForm({ ...form, key_value: e.target.value })}
-                placeholder="Paste the key or token"
-              />
-            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
