@@ -172,7 +172,7 @@ export default function AdminZoom() {
                 Zoom Setup ({accounts.length})
               </CardTitle>
               <CardDescription className="mt-1">
-                Add, edit, or remove Zoom app credentials and meeting details.
+                Add, edit, or remove Zoom meeting details.
               </CardDescription>
             </div>
             <Button onClick={openCreate}>
