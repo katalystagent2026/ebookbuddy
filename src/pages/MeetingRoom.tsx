@@ -31,11 +31,26 @@ const MeetingRoom = () => {
     }
   }, [user]);
 
-  // Load meeting credentials from the protected config table (auth required by RLS)
+  // Load meeting credentials from the protected config tables (auth required by RLS)
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
+      const { data: account } = await supabase
+        .from("zoom_accounts")
+        .select("meeting_id, passcode")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (account?.meeting_id) {
+        setMeetingId(account.meeting_id);
+        setPasscode(account.passcode ?? "");
+        return;
+      }
+
       const { data } = await supabase
         .from("zoom_config")
         .select("meeting_id, passcode")
@@ -50,6 +65,7 @@ const MeetingRoom = () => {
       cancelled = true;
     };
   }, [user]);
+
 
 
   useEffect(() => {

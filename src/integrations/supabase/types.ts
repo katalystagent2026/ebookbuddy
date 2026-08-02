@@ -158,6 +158,42 @@ export type Database = {
         }
         Relationships: []
       }
+      zoom_accounts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          meeting_id: string
+          name: string
+          passcode: string
+          sdk_key: string
+          sdk_secret: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          meeting_id?: string
+          name: string
+          passcode?: string
+          sdk_key?: string
+          sdk_secret?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          meeting_id?: string
+          name?: string
+          passcode?: string
+          sdk_key?: string
+          sdk_secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       zoom_config: {
         Row: {
           id: string

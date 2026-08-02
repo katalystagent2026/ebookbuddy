@@ -2,10 +2,18 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Loader2, UserCog, Eye, EyeOff, Save, X } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Search, Loader2, UserCog, Eye, EyeOff, Save, X, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -32,7 +40,13 @@ export default function AdminUsers() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: '', email: '' });
+  const [savingUser, setSavingUser] = useState(false);
+  const [deleteUser, setDeleteUser] = useState<Profile | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
+
 
   useEffect(() => {
     fetchUsers();
@@ -151,6 +165,56 @@ export default function AdminUsers() {
     setNewPassword('');
     setShowPassword(false);
   };
+
+  const openEditUser = (profile: Profile) => {
+    setEditUser(profile);
+    setEditForm({ full_name: profile.full_name || '', email: profile.email });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editUser) return;
+    setSavingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+        body: {
+          action: 'update',
+          userId: editUser.user_id,
+          fullName: editForm.full_name,
+          email: editForm.email,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User updated' });
+      setEditUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({ title: 'Error updating user', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+        body: { action: 'delete', userId: deleteUser.user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User deleted' });
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({ title: 'Error deleting user', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
 
   const filteredProfiles = profiles.filter(profile => 
     profile.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -275,21 +339,30 @@ export default function AdminUsers() {
                     {new Date(profile.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={roles[profile.user_id] || 'user'}
-                      onValueChange={(value) => updateUserRole(profile.user_id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="volunteer">Volunteer</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={roles[profile.user_id] || 'user'}
+                        onValueChange={(value) => updateUserRole(profile.user_id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="volunteer">Volunteer</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" onClick={() => openEditUser(profile)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteUser(profile)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
+
                 </TableRow>
               ))}
               {filteredProfiles.length === 0 && (
@@ -303,6 +376,62 @@ export default function AdminUsers() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>Update this user's name and email address.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.full_name}
+                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                maxLength={120}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                maxLength={255}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditUser(null)} disabled={savingUser}>Cancel</Button>
+            <Button onClick={handleSaveUser} disabled={savingUser}>
+              {savingUser && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteUser?.email}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the account and its profile. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} disabled={deleting}>
+              {deleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }

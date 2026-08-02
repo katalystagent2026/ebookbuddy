@@ -1,10 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Bell, Palette, Construction } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import AdminUsers from '@/components/admin/AdminUsers';
 
 export default function AdminSettings() {
   return (
     <div className="space-y-6">
+      <AdminUsers />
+
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
