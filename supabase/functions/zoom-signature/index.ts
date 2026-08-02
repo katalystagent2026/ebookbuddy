@@ -47,17 +47,6 @@ serve(async (req) => {
     // Caller is authenticated; avoid logging identifying user data.
 
 
-    const sdkKey = Deno.env.get("ZOOM_SDK_KEY");
-    const sdkSecret = Deno.env.get("ZOOM_SDK_SECRET");
-
-    if (!sdkKey || !sdkSecret) {
-      console.error("Missing ZOOM_SDK_KEY or ZOOM_SDK_SECRET");
-      return new Response(
-        JSON.stringify({ error: "Zoom SDK credentials not configured." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const { meetingNumber, role = 0 }: SignatureRequest = await req.json();
 
     if (!meetingNumber || !/^\d{9,12}$/.test(String(meetingNumber).replace(/\s/g, ""))) {
@@ -69,25 +58,54 @@ serve(async (req) => {
 
     const requestedMeeting = String(meetingNumber).replace(/\s/g, "");
 
-    // Only ever sign the platform's own configured meeting number
     const serviceClient = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const { data: config } = await serviceClient
-      .from("zoom_config")
-      .select("meeting_id")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
-    const configuredMeeting = String(config?.meeting_id ?? "").replace(/\s/g, "");
-    if (!configuredMeeting || configuredMeeting !== requestedMeeting) {
+    // Prefer an active Zoom setup configured in the admin dashboard
+    const { data: accounts } = await serviceClient
+      .from("zoom_accounts")
+      .select("sdk_key, sdk_secret, meeting_id")
+      .eq("is_active", true);
+
+    const matchedAccount = (accounts ?? []).find(
+      (a: { meeting_id: string | null }) =>
+        String(a.meeting_id ?? "").replace(/\s/g, "") === requestedMeeting,
+    );
+
+    let sdkKey = matchedAccount?.sdk_key || "";
+    let sdkSecret = matchedAccount?.sdk_secret || "";
+
+    if (!matchedAccount) {
+      // Fall back to the legacy single meeting config + platform secrets
+      const { data: config } = await serviceClient
+        .from("zoom_config")
+        .select("meeting_id")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const configuredMeeting = String(config?.meeting_id ?? "").replace(/\s/g, "");
+      if (!configuredMeeting || configuredMeeting !== requestedMeeting) {
+        return new Response(
+          JSON.stringify({ error: "Meeting not allowed" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      sdkKey = Deno.env.get("ZOOM_SDK_KEY") ?? "";
+      sdkSecret = Deno.env.get("ZOOM_SDK_SECRET") ?? "";
+    }
+
+    if (!sdkKey || !sdkSecret) {
+      console.error("Missing Zoom SDK credentials for the requested meeting");
       return new Response(
-        JSON.stringify({ error: "Meeting not allowed" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Zoom SDK credentials not configured." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
 
     // Host role (1) is reserved for admins; everyone else joins as attendee (0)
     let effectiveRole = 0;
