@@ -84,6 +84,7 @@ export default function AdminSettings() {
           <p>• Registration toggle</p>
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
