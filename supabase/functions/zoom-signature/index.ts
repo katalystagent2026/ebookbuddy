@@ -60,12 +60,54 @@ serve(async (req) => {
 
     const { meetingNumber, role = 0 }: SignatureRequest = await req.json();
 
-    if (!meetingNumber) {
+    if (!meetingNumber || !/^\d{9,12}$/.test(String(meetingNumber).replace(/\s/g, ""))) {
       return new Response(
-        JSON.stringify({ error: "Meeting number is required" }),
+        JSON.stringify({ error: "A valid meeting number is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const requestedMeeting = String(meetingNumber).replace(/\s/g, "");
+
+    // Only ever sign the platform's own configured meeting number
+    const serviceClient = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data: config } = await serviceClient
+      .from("zoom_config")
+      .select("meeting_id")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const configuredMeeting = String(config?.meeting_id ?? "").replace(/\s/g, "");
+    if (!configuredMeeting || configuredMeeting !== requestedMeeting) {
+      return new Response(
+        JSON.stringify({ error: "Meeting not allowed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Host role (1) is reserved for admins; everyone else joins as attendee (0)
+    let effectiveRole = 0;
+    if (Number(role) === 1) {
+      const userId = (data.claims as Record<string, unknown>).sub as string | undefined;
+      if (userId) {
+        const { data: isAdmin } = await serviceClient.rpc("has_role", {
+          _user_id: userId,
+          _role: "admin",
+        });
+        if (isAdmin === true) effectiveRole = 1;
+      }
+      if (effectiveRole !== 1) {
+        return new Response(
+          JSON.stringify({ error: "Host role not permitted" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
 
     // Generate signature
     const iat = Math.round(Date.now() / 1000) - 30;
@@ -74,12 +116,13 @@ serve(async (req) => {
     const oHeader = { alg: "HS256", typ: "JWT" };
     const oPayload = {
       sdkKey,
-      mn: meetingNumber,
-      role,
+      mn: requestedMeeting,
+      role: effectiveRole,
       iat,
       exp,
       tokenExp: exp,
     };
+
 
     const sHeader = btoa(JSON.stringify(oHeader))
       .replace(/\+/g, "-")

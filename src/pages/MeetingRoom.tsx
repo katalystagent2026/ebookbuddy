@@ -13,8 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 const MeetingRoom = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [meetingId, setMeetingId] = useState("885 0722 0856");
-  const [passcode, setPasscode] = useState("475217");
+  const [meetingId, setMeetingId] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSdkLoading, setIsSdkLoading] = useState(true);
@@ -30,6 +30,27 @@ const MeetingRoom = () => {
       setUserName(displayName);
     }
   }, [user]);
+
+  // Load meeting credentials from the protected config table (auth required by RLS)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("zoom_config")
+        .select("meeting_id, passcode")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setMeetingId(data.meeting_id ?? "");
+      setPasscode(data.passcode ?? "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
 
   useEffect(() => {
     // Pre-load the Zoom SDK
