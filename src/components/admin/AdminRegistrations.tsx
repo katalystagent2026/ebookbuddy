@@ -182,12 +182,50 @@ export default function AdminRegistrations() {
                                   <p className="font-medium">{selectedRegistration.reading_level || '-'}</p>
                                 </div>
                               </div>
-                              {selectedRegistration.notes && (
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Notes</p>
-                                  <p className="font-medium">{selectedRegistration.notes}</p>
-                                </div>
-                              )}
+                              {selectedRegistration.notes && (() => {
+                                let parsed: Record<string, unknown> | null = null;
+                                try {
+                                  const raw = JSON.parse(selectedRegistration.notes);
+                                  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+                                    parsed = raw as Record<string, unknown>;
+                                  }
+                                } catch {
+                                  parsed = null;
+                                }
+
+                                const toText = (value: unknown) =>
+                                  typeof value === 'string' || typeof value === 'number'
+                                    ? String(value)
+                                    : '-';
+
+                                if (!parsed) {
+                                  return (
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Notes</p>
+                                      <p className="font-medium whitespace-pre-wrap break-words">
+                                        {String(selectedRegistration.notes).slice(0, 1000)}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Student Name</p>
+                                      <p className="font-medium">{toText(parsed.student_name)}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Gender</p>
+                                      <p className="font-medium">{toText(parsed.gender)}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Availability</p>
+                                      <p className="font-medium">{toText(parsed.availability)}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </DialogContent>

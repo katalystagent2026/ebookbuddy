@@ -44,8 +44,8 @@ serve(async (req) => {
       );
     }
 
-    const userId = data.claims.sub;
-    console.log("Authenticated user requesting Zoom signature:", userId);
+    // Caller is authenticated; avoid logging identifying user data.
+
 
     const sdkKey = Deno.env.get("ZOOM_SDK_KEY");
     const sdkSecret = Deno.env.get("ZOOM_SDK_SECRET");
