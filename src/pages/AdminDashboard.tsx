@@ -24,28 +24,26 @@ import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
 
-type TabId = 'users' | 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
+type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
 
 const tabs = [
-  { id: 'users' as TabId, label: 'Users', icon: Users },
   { id: 'registrations' as TabId, label: 'Registrations', icon: ClipboardList },
   { id: 'students' as TabId, label: 'Students', icon: GraduationCap },
   { id: 'volunteers' as TabId, label: 'Volunteers', icon: Heart },
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
-  { id: 'zoom' as TabId, label: 'Zoom', icon: Video },
+  { id: 'zoom' as TabId, label: 'Zoom Setup', icon: Video },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<TabId>('users');
+  const [activeTab, setActiveTab] = useState<TabId>('registrations');
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { signOut } = useAuth();
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'users':
-        return <AdminUsers />;
       case 'registrations':
         return <AdminRegistrations />;
       case 'students':
@@ -61,9 +59,10 @@ export default function AdminDashboard() {
       case 'settings':
         return <AdminSettings />;
       default:
-        return <AdminUsers />;
+        return <AdminRegistrations />;
     }
   };
+
 
   return (
     <div className="min-h-screen flex bg-muted/30">
