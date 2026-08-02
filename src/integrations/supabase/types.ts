@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_credential_entries: {
+        Row: {
+          created_at: string
+          credential_id: string
+          id: string
+          key_value: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credential_id: string
+          id?: string
+          key_value?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string
+          id?: string
+          key_value?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_credential_entries_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "api_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_credentials: {
         Row: {
           created_at: string
