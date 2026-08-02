@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { 
-  Users, 
   ClipboardList, 
   GraduationCap, 
   Heart, 
@@ -15,7 +14,6 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import AdminUsers from '@/components/admin/AdminUsers';
 import AdminRegistrations from '@/components/admin/AdminRegistrations';
 import AdminStudents from '@/components/admin/AdminStudents';
 import AdminVolunteers from '@/components/admin/AdminVolunteers';
