@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Video, Loader2, Plus, Pencil, Trash2, Eye, EyeOff, Terminal } from 'lucide-react';
+import { Video, Loader2, Plus, Pencil, Trash2, Terminal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ZoomAccount {
