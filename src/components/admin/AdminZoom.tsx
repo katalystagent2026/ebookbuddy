@@ -69,7 +69,6 @@ export default function AdminZoom() {
   const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm });
-    setShowSecret(false);
     setDialogOpen(true);
   };
 
@@ -77,13 +76,10 @@ export default function AdminZoom() {
     setEditingId(account.id);
     setForm({
       name: account.name,
-      sdk_key: account.sdk_key,
-      sdk_secret: account.sdk_secret,
       meeting_id: account.meeting_id,
       passcode: account.passcode,
       is_active: account.is_active,
     });
-    setShowSecret(false);
     setDialogOpen(true);
   };
 
