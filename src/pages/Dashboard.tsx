@@ -1,12 +1,38 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Video, BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [canJoin, setCanJoin] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      setCanJoin(false);
+      setCheckingAccess(false);
+      return;
+    }
+    setCheckingAccess(true);
+    (async () => {
+      const { data, error } = await supabase.rpc("can_join_active_meeting", {
+        _user_id: user.id,
+      });
+      if (cancelled) return;
+      setCanJoin(!error && data === true);
+      setCheckingAccess(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
 
   const handleSignOut = async () => {
     await signOut();
