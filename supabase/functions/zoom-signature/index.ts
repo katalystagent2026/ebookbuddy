@@ -211,6 +211,8 @@ serve(async (req) => {
       exp: getNumericDate(7200),
       appKey: sdkKey,
       tokenExp: getNumericDate(7200),
+      // Enables Gallery View in the Web SDK (WebRTC mode)
+      video_webrtc_mode: 1,
     };
 
     console.log("Zoom JWT payload:", JSON.stringify(payload));
