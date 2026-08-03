@@ -238,7 +238,7 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
   return (
     <div
-      className="relative w-full h-full flex-1 min-h-0 overflow-hidden"
+      className="relative w-full h-full flex-1 min-h-0 flex flex-col"
       style={{ height: "100%", maxHeight: "100%" }}
     >
       {status !== "joined" && (
@@ -254,14 +254,17 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           </div>
         </div>
       )}
-      {/* Zoom owns this node. Never render React children inside it. */}
+      {/* Zoom owns this node. Never render React children inside it.
+          flex-1 fills the wrapper; the video view is sized to leave room for
+          Zoom's bottom toolbar, which must never be clipped. */}
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="absolute inset-0 min-h-0 rounded-lg overflow-hidden"
-        style={{ width: "100%", height: "100%", maxHeight: "100%" }}
+        className="flex-1 min-h-0 w-full rounded-lg flex flex-col"
+        style={{ width: "100%", height: "100%", maxHeight: "100%", overflow: "visible" }}
       />
     </div>
+  );
 
   );
 };
