@@ -23,6 +23,8 @@ const ZoomMeetingFrameBase = ({ userName, userEmail }: ZoomMeetingFrameProps) =>
   const startedRef = useRef(false);
   const joinedRef = useRef(false);
   const sdkRef = useRef<any>(null);
+  const cleanupProbeRef = useRef<(() => void) | null>(null);
+
 
   const [status, setStatus] = useState<"loading" | "joined" | "error">("loading");
   const [message, setMessage] = useState("Connecting you to the video call…");
