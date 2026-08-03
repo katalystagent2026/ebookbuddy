@@ -222,12 +222,14 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         signature: jwtSignature,
+        appKey: sdkKey,
         sdkKey,
         meetingNumber: requestedMeeting,
         passcode,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
 
   } catch (error) {
     console.error("Error generating Zoom signature:", error);
