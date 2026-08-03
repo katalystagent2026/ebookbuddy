@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 interface ZoomMeetingFrameProps {
   userName: string;
+  /** Exact usable pixel height handed down by the page (single source of truth). */
+  availableHeight?: number;
 }
 
 /**
@@ -17,8 +19,9 @@ interface ZoomMeetingFrameProps {
  * never try to reconcile its children — otherwise we get
  * "NotFoundError: Failed to execute 'removeChild' on 'Node'".
  */
-const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
+const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFrameProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<any>(null);
   const startedRef = useRef(false);
   const joinedRef = useRef(false);
@@ -28,6 +31,9 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
   const leftRef = useRef(false);
+  // Always the latest height, readable from the mount-once effect closure.
+  const heightRef = useRef(availableHeight);
+  heightRef.current = availableHeight;
 
 
 
@@ -105,21 +111,42 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         // Zoom renders its control toolbar at the bottom of the root node, so we
         // hand the video view a height that already excludes that strip.
         const TOOLBAR_RESERVE = 68;
-        const measure = () => {
-          const el = containerRef.current;
+        /** Usable box for the SDK: never larger than what's visible below the header. */
+        const boxSize = () => {
+          const el = wrapperRef.current ?? containerRef.current;
           const rect = el?.getBoundingClientRect();
           const width = Math.floor(rect?.width || el?.clientWidth || window.innerWidth);
-          // Cap height to the space actually visible below the header so Zoom's
-          // gallery tiles shrink to fit instead of pushing the page taller.
-          const headerBottom = Math.max(0, Math.floor(rect?.top ?? 72));
-          const available = Math.floor((window.visualViewport?.height || window.innerHeight) - headerBottom);
-          const measured = Math.floor(rect?.height || el?.clientHeight || available);
-          const height = Math.min(measured, available > 0 ? available : measured) - TOOLBAR_RESERVE;
+          const top = Math.max(0, Math.floor(rect?.top ?? 72));
+          const viewport = Math.floor(window.visualViewport?.height || window.innerHeight);
+          const visible = Math.max(180, viewport - top);
+          const declared = Math.floor(heightRef.current || rect?.height || visible);
           return {
             width: Math.max(240, width),
-            height: Math.max(180, height),
+            height: Math.max(180, Math.min(declared, visible)),
           };
         };
+        /** Video-view size = box minus the toolbar strip, so controls stay visible. */
+        const measure = () => {
+          const box = boxSize();
+          return { width: box.width, height: Math.max(180, box.height - TOOLBAR_RESERVE) };
+        };
+        /** Force the SDK's own root nodes to respect the host box height. */
+        const clampZoomRoot = () => {
+          const host = containerRef.current;
+          if (!host) return;
+          const box = boxSize();
+          host.style.height = `${box.height}px`;
+          host.style.maxHeight = `${box.height}px`;
+          host.style.overflow = "hidden";
+          const nodes = host.querySelectorAll<HTMLElement>(
+            '[class*="MuiPaper-root"], [class*="zoom-app"], [class*="zmwebsdk"]'
+          );
+          nodes.forEach((node) => {
+            node.style.maxHeight = `${box.height}px`;
+            node.style.overflow = "hidden";
+          });
+        };
+
         const size = measure();
         const ribbonWidth = (h: number, w: number) => ({
           width: Math.min(300, Math.max(120, Math.floor(w * 0.35))),
@@ -145,10 +172,13 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         // window resizes, orientation changes, and layout shifts.
         let frame = 0;
         let last = { width: 0, height: 0 };
-        const applySize = () => {
+        const applySize = (force = false) => {
           if (disposed) return;
           const next = measure();
-          if (next.width === last.width && next.height === last.height) return;
+          if (!force && next.width === last.width && next.height === last.height) {
+            clampZoomRoot();
+            return;
+          }
           last = next;
           try {
             (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
@@ -158,6 +188,10 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           } catch {
             // SDK not ready yet
           }
+          // The SDK writes its own inline height while re-laying out gallery
+          // tiles, so re-assert the host box afterwards.
+          clampZoomRoot();
+          setTimeout(clampZoomRoot, 150);
         };
         const scheduleApply = () => {
           if (frame) cancelAnimationFrame(frame);
@@ -182,8 +216,22 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         window.addEventListener("orientationchange", onOrientation);
         window.visualViewport?.addEventListener("resize", scheduleApply);
 
+        // Participant count / view-mode changes make Zoom regrow its layout.
+        for (const evt of ["user-added", "user-removed", "user-updated", "video-active-change", "active-speaker"]) {
+          try {
+            client.on(evt as any, () => {
+              applySize(true);
+              setTimeout(() => applySize(true), 300);
+            });
+          } catch {
+            // unsupported event name in this SDK version
+          }
+        }
+
         resizeObserverRef.current = new ResizeObserver(() => scheduleApply());
-        resizeObserverRef.current.observe(containerRef.current);
+        resizeObserverRef.current.observe(wrapperRef.current ?? containerRef.current);
+        clampZoomRoot();
+
 
 
 
@@ -200,6 +248,9 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         joinedRef.current = true;
         if (disposed) return;
         setStatus("joined");
+        applySize(true);
+        setTimeout(() => applySize(true), 500);
+        setTimeout(() => applySize(true), 1500);
         toast.success("Successfully joined the meeting!");
       } catch (error: any) {
         console.error("Failed to join meeting:", error);
@@ -238,8 +289,13 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
   return (
     <div
-      className="relative w-full h-full flex-1 min-h-0 flex flex-col"
-      style={{ height: "100%", maxHeight: "100%" }}
+      ref={wrapperRef}
+      className="relative w-full flex flex-col"
+      style={{
+        height: availableHeight ? `${availableHeight}px` : "100%",
+        maxHeight: availableHeight ? `${availableHeight}px` : "100%",
+        overflow: "hidden",
+      }}
     >
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
@@ -255,19 +311,29 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         </div>
       )}
       {/* Zoom owns this node. Never render React children inside it.
-          flex-1 fills the wrapper; the video view is sized to leave room for
-          Zoom's bottom toolbar, which must never be clipped. */}
+          This is the direct wrapper of the SDK widget: it is clipped so the
+          SDK's oversized gallery layout can never push the page taller. */}
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="flex-1 min-h-0 w-full rounded-lg flex flex-col"
-        style={{ width: "100%", height: "100%", maxHeight: "100%", overflow: "visible" }}
+        className="w-full rounded-lg flex flex-col"
+        style={{
+          width: "100%",
+          height: availableHeight ? `${availableHeight}px` : "100%",
+          maxHeight: availableHeight ? `${availableHeight}px` : "100%",
+          overflow: "hidden",
+        }}
       />
     </div>
   );
+
 };
 
-// Memoized with a constant comparator: after mount this never re-renders.
-export const ZoomMeetingFrame = memo(ZoomMeetingFrameBase, () => true);
+// Re-renders ONLY when the available height changes (styles only — the init
+// effect has empty deps, so Zoom is never re-initialized).
+export const ZoomMeetingFrame = memo(
+  ZoomMeetingFrameBase,
+  (prev, next) => prev.availableHeight === next.availableHeight
+);
 
 export default ZoomMeetingFrame;
