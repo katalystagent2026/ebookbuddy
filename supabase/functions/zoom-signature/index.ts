@@ -155,46 +155,41 @@ serve(async (req) => {
     }
 
 
-    // Generate signature
-    const iat = Math.round(Date.now() / 1000) - 30;
-    const exp = iat + 60 * 60 * 2;
+    // Generate signature with djwt (HS256)
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(sdkSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"],
+    );
 
-    const oHeader = { alg: "HS256", typ: "JWT" };
-    const oPayload = {
+    const payload = {
       sdkKey,
-      mn: requestedMeeting,
+      mn: Number(requestedMeeting),
       role: effectiveRole,
-      iat,
-      exp,
-      tokenExp: exp,
+      iat: getNumericDate(0) - 30,
+      exp: getNumericDate(7200),
+      appKey: sdkKey,
+      tokenExp: getNumericDate(7200),
     };
 
+    console.log("Zoom JWT payload:", JSON.stringify(payload));
 
-    const sHeader = btoa(JSON.stringify(oHeader))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-    const sPayload = btoa(JSON.stringify(oPayload))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const signatureInput = `${sHeader}.${sPayload}`;
-    const hmac = createHmac("sha256", sdkSecret);
-    hmac.update(signatureInput);
-    const signature = hmac.digest("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const jwtSignature = `${sHeader}.${sPayload}.${signature}`;
+    const jwtSignature = await create({ alg: "HS256", typ: "JWT" }, payload, key);
 
     console.log("Zoom signature generated successfully");
 
     return new Response(
-      JSON.stringify({ signature: jwtSignature, sdkKey }),
+      JSON.stringify({
+        signature: jwtSignature,
+        sdkKey,
+        meetingNumber: requestedMeeting,
+        passcode,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error generating Zoom signature:", error);
     return new Response(
