@@ -60,20 +60,23 @@ const MeetingRoom = () => {
   const ready = Boolean(meetingId && userName);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-warm overflow-hidden">
+    <div className="h-screen h-[100dvh] flex flex-col bg-gradient-warm overflow-hidden">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
-        <div className="safe-container py-4 flex items-center gap-4">
+        <div className="safe-container py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Video className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-heading font-bold text-foreground">Meeting Room</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <Video className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+            <h1 className="text-base sm:text-xl font-heading font-bold text-foreground truncate">
+              Meeting Room
+            </h1>
           </div>
         </div>
       </header>
 
-      <main className="safe-container flex-1 min-h-0 flex flex-col py-4 gap-4">
+      <main className="safe-container flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4">
+
         {isChecking && (
           <Card className="max-w-md mx-auto shrink-0">
             <CardContent className="pt-6 flex items-center gap-4">
