@@ -60,7 +60,7 @@ const MeetingRoom = () => {
   const ready = Boolean(meetingId && userName);
 
   return (
-    <div className="h-screen h-[100dvh] flex flex-col bg-gradient-warm overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-gradient-warm">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
         <div className="safe-container py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
@@ -75,7 +75,10 @@ const MeetingRoom = () => {
         </div>
       </header>
 
-      <main className="safe-container w-full flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4">
+      <main
+        className="safe-container w-full flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4"
+        style={{ height: "calc(100dvh - 72px)", minHeight: "480px" }}
+      >
 
         {isChecking && (
           <Card className="max-w-md mx-auto shrink-0">
@@ -100,8 +103,9 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-visible">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-visible">
+
             {ready ? (
               <ZoomMeetingFrame userName={userName} />
             ) : (
