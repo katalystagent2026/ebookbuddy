@@ -206,8 +206,10 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           // the SDK lays the tiles out anyway and grows past the host box
           // (pushing the toolbar out of view), so drop back to Speaker View.
           try {
-            const fits = next.width >= 720 && next.height >= 411;
-            (clientRef.current as any)?.setViewType?.(fits ? "gallery" : "speaker");
+            const galleryFits = next.width >= 720 && next.height >= 411;
+            // Only ever force a downgrade — never override the user's own
+            // choice of view when there is enough room for it.
+            if (!galleryFits) (clientRef.current as any)?.setViewType?.("speaker");
           } catch {
             // setViewType is only valid once the meeting is joined
           }
