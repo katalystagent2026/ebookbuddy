@@ -245,6 +245,9 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
         joinedRef.current = true;
         if (disposed) return;
         setStatus("joined");
+        applySize(true);
+        setTimeout(() => applySize(true), 500);
+        setTimeout(() => applySize(true), 1500);
         toast.success("Successfully joined the meeting!");
       } catch (error: any) {
         console.error("Failed to join meeting:", error);
