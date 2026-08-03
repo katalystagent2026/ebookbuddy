@@ -202,6 +202,15 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           } catch {
             // SDK not ready yet
           }
+          // Zoom's documented minimum for Gallery View is 720x411. Below that
+          // the SDK lays the tiles out anyway and grows past the host box
+          // (pushing the toolbar out of view), so drop back to Speaker View.
+          try {
+            const fits = next.width >= 720 && next.height >= 411;
+            (clientRef.current as any)?.setViewType?.(fits ? "gallery" : "speaker");
+          } catch {
+            // setViewType is only valid once the meeting is joined
+          }
           // The SDK writes its own inline height while re-laying out gallery
           // tiles, so re-assert the host box afterwards.
           clampZoomRoot();
