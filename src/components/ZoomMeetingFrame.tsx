@@ -51,12 +51,21 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
         const measure = () => {
           const el = containerRef.current;
+          const rect = el?.getBoundingClientRect();
+          const width = Math.floor(rect?.width || el?.clientWidth || window.innerWidth);
+          const height = Math.floor(rect?.height || el?.clientHeight || window.innerHeight);
+          // Never exceed the container: Zoom sizes its canvas from these values,
+          // and an oversized value causes clipping/overflow on small screens.
           return {
-            width: Math.max(320, Math.floor(el?.clientWidth ?? window.innerWidth)),
-            height: Math.max(240, Math.floor(el?.clientHeight ?? window.innerHeight)),
+            width: Math.max(240, width),
+            height: Math.max(180, height),
           };
         };
         const size = measure();
+        const ribbonWidth = (h: number, w: number) => ({
+          width: Math.min(300, Math.max(120, Math.floor(w * 0.35))),
+          height: h,
+        });
 
         await client.init({
           zoomAppRoot: containerRef.current,
@@ -67,26 +76,56 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
             video: {
               isResizable: true,
               popper: { disableDraggable: true },
-              viewSizes: { default: size, ribbon: { width: 300, height: size.height } },
+              viewSizes: { default: size, ribbon: ribbonWidth(size.height, size.width) },
             },
           },
         } as any);
         if (disposed) return;
 
-        // Keep Zoom's gallery/video view in sync with the container size.
+        // Keep Zoom's gallery/video view in sync with the container size across
+        // window resizes, orientation changes, and layout shifts.
+        let frame = 0;
+        let last = { width: 0, height: 0 };
         const applySize = () => {
+          if (disposed) return;
           const next = measure();
+          if (next.width === last.width && next.height === last.height) return;
+          last = next;
           try {
             (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
               default: next,
-              ribbon: { width: 300, height: next.height },
+              ribbon: ribbonWidth(next.height, next.width),
             });
           } catch {
             // SDK not ready yet
           }
         };
-        resizeObserverRef.current = new ResizeObserver(() => applySize());
+        const scheduleApply = () => {
+          if (frame) cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            applySize();
+          });
+        };
+        cleanupResizeRef.current = () => {
+          if (frame) cancelAnimationFrame(frame);
+          window.removeEventListener("resize", scheduleApply);
+          window.removeEventListener("orientationchange", onOrientation);
+          window.visualViewport?.removeEventListener("resize", scheduleApply);
+        };
+        // Orientation change reports stale sizes for a beat on mobile browsers.
+        const onOrientation = () => {
+          scheduleApply();
+          setTimeout(scheduleApply, 250);
+          setTimeout(scheduleApply, 600);
+        };
+        window.addEventListener("resize", scheduleApply);
+        window.addEventListener("orientationchange", onOrientation);
+        window.visualViewport?.addEventListener("resize", scheduleApply);
+
+        resizeObserverRef.current = new ResizeObserver(() => scheduleApply());
         resizeObserverRef.current.observe(containerRef.current);
+
 
 
         await client.join({
