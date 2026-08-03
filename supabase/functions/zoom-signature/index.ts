@@ -63,6 +63,31 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Only verified volunteers assigned to the active Zoom room may get a signature
+    const callerId = (data.claims as Record<string, unknown>).sub as string | undefined;
+    let allowed = false;
+    if (callerId) {
+      const { data: canJoin } = await serviceClient.rpc("can_join_active_meeting", {
+        _user_id: callerId,
+      });
+      allowed = canJoin === true;
+      if (!allowed) {
+        const { data: isAdmin } = await serviceClient.rpc("has_role", {
+          _user_id: callerId,
+          _role: "admin",
+        });
+        allowed = isAdmin === true;
+      }
+    }
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: "Not permitted to join this meeting" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
+
     // Prefer an active Zoom setup configured in the admin dashboard
     const { data: accounts } = await serviceClient
       .from("zoom_accounts")

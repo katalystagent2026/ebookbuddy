@@ -1,12 +1,38 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Video, BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [canJoin, setCanJoin] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      setCanJoin(false);
+      setCheckingAccess(false);
+      return;
+    }
+    setCheckingAccess(true);
+    (async () => {
+      const { data, error } = await supabase.rpc("can_join_active_meeting", {
+        _user_id: user.id,
+      });
+      if (cancelled) return;
+      setCanJoin(!error && data === true);
+      setCheckingAccess(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -47,9 +73,13 @@ const Dashboard = () => {
 
           <div className="grid sm:grid-cols-2 gap-6">
             {/* Online Meeting Room Card */}
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-2 hover:border-primary/50"
-              onClick={() => navigate("/meeting")}
+            <Card
+              className={
+                canJoin
+                  ? "cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-2 hover:border-primary/50"
+                  : "border-2 opacity-70"
+              }
+              onClick={() => canJoin && navigate("/meeting")}
             >
               <CardHeader className="text-center pb-2">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -59,13 +89,16 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
-                  Join a live video session with your reading buddy
+                  {canJoin
+                    ? "Join a live video session with your reading buddy"
+                    : "Available to verified volunteers assigned to the active meeting room"}
                 </CardDescription>
-                <Button variant="hero" className="w-full mt-4">
-                  Join Meeting
+                <Button variant="hero" className="w-full mt-4" disabled={!canJoin || checkingAccess}>
+                  {checkingAccess ? "Checking access..." : "Join Meeting"}
                 </Button>
               </CardContent>
             </Card>
+
 
             {/* eBooks Card */}
             <Card 
