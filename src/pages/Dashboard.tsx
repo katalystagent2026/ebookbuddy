@@ -73,9 +73,13 @@ const Dashboard = () => {
 
           <div className="grid sm:grid-cols-2 gap-6">
             {/* Online Meeting Room Card */}
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-2 hover:border-primary/50"
-              onClick={() => navigate("/meeting")}
+            <Card
+              className={
+                canJoin
+                  ? "cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-2 hover:border-primary/50"
+                  : "border-2 opacity-70"
+              }
+              onClick={() => canJoin && navigate("/meeting")}
             >
               <CardHeader className="text-center pb-2">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -85,13 +89,16 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-center">
-                  Join a live video session with your reading buddy
+                  {canJoin
+                    ? "Join a live video session with your reading buddy"
+                    : "Available to verified volunteers assigned to the active meeting room"}
                 </CardDescription>
-                <Button variant="hero" className="w-full mt-4">
-                  Join Meeting
+                <Button variant="hero" className="w-full mt-4" disabled={!canJoin || checkingAccess}>
+                  {checkingAccess ? "Checking access..." : "Join Meeting"}
                 </Button>
               </CardContent>
             </Card>
+
 
             {/* eBooks Card */}
             <Card 
