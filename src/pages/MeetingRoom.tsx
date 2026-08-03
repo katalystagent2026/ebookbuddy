@@ -60,8 +60,8 @@ const MeetingRoom = () => {
   const ready = Boolean(meetingId && userName);
 
   return (
-    <div className="min-h-screen bg-gradient-warm">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+    <div className="h-screen flex flex-col bg-gradient-warm overflow-hidden">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
         <div className="safe-container py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
@@ -73,9 +73,9 @@ const MeetingRoom = () => {
         </div>
       </header>
 
-      <main className="safe-container py-8">
+      <main className="safe-container flex-1 min-h-0 flex flex-col py-4 gap-4">
         {isChecking && (
-          <Card className="max-w-md mx-auto mb-8">
+          <Card className="max-w-md mx-auto shrink-0">
             <CardContent className="pt-6 flex items-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Preparing your meeting room…</p>
@@ -84,7 +84,7 @@ const MeetingRoom = () => {
         )}
 
         {!isChecking && !meetingId && (
-          <Card className="max-w-md mx-auto mb-8">
+          <Card className="max-w-md mx-auto shrink-0">
             <CardContent className="pt-6 text-center">
               <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-heading font-semibold text-muted-foreground mb-2">
@@ -97,18 +97,19 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <Card className="h-full min-h-[600px]">
-          <CardContent className="p-0 h-full">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
             {ready ? (
               <ZoomMeetingFrame userName={userName} />
             ) : (
-              <div className="w-full h-full min-h-[600px] rounded-lg bg-muted" />
+              <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
             )}
           </CardContent>
         </Card>
       </main>
     </div>
   );
+
 };
 
 export default MeetingRoom;
