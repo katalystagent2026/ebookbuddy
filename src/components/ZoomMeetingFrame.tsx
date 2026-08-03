@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +24,11 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   const joinedRef = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const cleanupResizeRef = useRef<(() => void) | null>(null);
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const leftRef = useRef(false);
+
 
 
   const [status, setStatus] = useState<"loading" | "joined" | "error">("loading");
@@ -50,6 +56,30 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
         const client = ZoomMtgEmbedded.createClient();
         clientRef.current = client;
+
+        // Redirect the moment the SDK reports this user left / the meeting ended.
+        const handleMeetingEnded = (reason?: string) => {
+          if (leftRef.current) return;
+          leftRef.current = true;
+          joinedRef.current = false;
+          console.log("[Zoom] meeting ended for user:", reason);
+          navigateRef.current("/dashboard", { replace: true });
+        };
+        try {
+          client.on("connection-change", (payload: any) => {
+            const state = payload?.state;
+            if (state === "Closed" || state === "Fail") handleMeetingEnded(`connection-change:${state}`);
+          });
+          client.on("meeting-status" as any, (payload: any) => {
+            // 3 = ended, 4 = failed in Zoom's MeetingStatus enum
+            if (payload?.meetingStatus === 3 || payload?.meetingStatus === 4) {
+              handleMeetingEnded(`meeting-status:${payload?.meetingStatus}`);
+            }
+          });
+        } catch {
+          // event names vary across SDK versions; ignore unsupported ones
+        }
+
 
         const measure = () => {
           const el = containerRef.current;
