@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
+import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -91,7 +91,7 @@ serve(async (req) => {
     // Prefer an active Zoom setup configured in the admin dashboard
     const { data: accounts } = await serviceClient
       .from("zoom_accounts")
-      .select("sdk_key, sdk_secret, meeting_id")
+      .select("sdk_key, sdk_secret, meeting_id, passcode")
       .eq("is_active", true);
 
     const matchedAccount = (accounts ?? []).find(
@@ -101,12 +101,13 @@ serve(async (req) => {
 
     let sdkKey = matchedAccount?.sdk_key || "";
     let sdkSecret = matchedAccount?.sdk_secret || "";
+    let passcode = matchedAccount?.passcode || "";
 
     if (!matchedAccount) {
       // Fall back to the legacy single meeting config + platform secrets
       const { data: config } = await serviceClient
         .from("zoom_config")
-        .select("meeting_id")
+        .select("meeting_id, passcode")
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -119,9 +120,11 @@ serve(async (req) => {
         );
       }
 
+      passcode = config?.passcode ?? "";
       sdkKey = Deno.env.get("ZOOM_SDK_KEY") ?? "";
       sdkSecret = Deno.env.get("ZOOM_SDK_SECRET") ?? "";
     }
+
 
     if (!sdkKey || !sdkSecret) {
       console.error("Missing Zoom SDK credentials for the requested meeting");
@@ -152,46 +155,41 @@ serve(async (req) => {
     }
 
 
-    // Generate signature
-    const iat = Math.round(Date.now() / 1000) - 30;
-    const exp = iat + 60 * 60 * 2;
+    // Generate signature with djwt (HS256)
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(sdkSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"],
+    );
 
-    const oHeader = { alg: "HS256", typ: "JWT" };
-    const oPayload = {
+    const payload = {
       sdkKey,
-      mn: requestedMeeting,
+      mn: Number(requestedMeeting),
       role: effectiveRole,
-      iat,
-      exp,
-      tokenExp: exp,
+      iat: getNumericDate(0) - 30,
+      exp: getNumericDate(7200),
+      appKey: sdkKey,
+      tokenExp: getNumericDate(7200),
     };
 
+    console.log("Zoom JWT payload:", JSON.stringify(payload));
 
-    const sHeader = btoa(JSON.stringify(oHeader))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-    const sPayload = btoa(JSON.stringify(oPayload))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const signatureInput = `${sHeader}.${sPayload}`;
-    const hmac = createHmac("sha256", sdkSecret);
-    hmac.update(signatureInput);
-    const signature = hmac.digest("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const jwtSignature = `${sHeader}.${sPayload}.${signature}`;
+    const jwtSignature = await create({ alg: "HS256", typ: "JWT" }, payload, key);
 
     console.log("Zoom signature generated successfully");
 
     return new Response(
-      JSON.stringify({ signature: jwtSignature, sdkKey }),
+      JSON.stringify({
+        signature: jwtSignature,
+        sdkKey,
+        meetingNumber: requestedMeeting,
+        passcode,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error generating Zoom signature:", error);
     return new Response(
