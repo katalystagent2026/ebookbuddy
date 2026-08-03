@@ -153,7 +153,11 @@ const MeetingRoom = () => {
           <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
 
             {ready ? (
-              <ZoomMeetingFrame userName={userName} />
+              provider === "jitsi" ? (
+                <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />
+              ) : (
+                <ZoomMeetingFrame userName={userName} />
+              )
             ) : (
               <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
             )}
