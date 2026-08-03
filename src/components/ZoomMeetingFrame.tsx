@@ -47,13 +47,45 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         const client = ZoomMtgEmbedded.createClient();
         clientRef.current = client;
 
+        const measure = () => {
+          const el = containerRef.current;
+          return {
+            width: Math.max(320, Math.floor(el?.clientWidth ?? window.innerWidth)),
+            height: Math.max(240, Math.floor(el?.clientHeight ?? window.innerHeight)),
+          };
+        };
+        const size = measure();
+
         await client.init({
           zoomAppRoot: containerRef.current,
           language: "en-US",
           patchJsMedia: true,
           leaveOnPageUnload: true,
-        });
+          customize: {
+            video: {
+              isResizable: true,
+              popper: { disableDraggable: true },
+              viewSizes: { default: size, ribbon: { width: 300, height: size.height } },
+            },
+          },
+        } as any);
         if (disposed) return;
+
+        // Keep Zoom's gallery/video view in sync with the container size.
+        const applySize = () => {
+          const next = measure();
+          try {
+            (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
+              default: next,
+              ribbon: { width: 300, height: next.height },
+            });
+          } catch {
+            // SDK not ready yet
+          }
+        };
+        resizeObserverRef.current = new ResizeObserver(() => applySize());
+        resizeObserverRef.current.observe(containerRef.current);
+
 
         await client.join({
           signature: signatureData.signature,
