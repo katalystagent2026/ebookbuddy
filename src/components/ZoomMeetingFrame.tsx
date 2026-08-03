@@ -108,21 +108,42 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
         // Zoom renders its control toolbar at the bottom of the root node, so we
         // hand the video view a height that already excludes that strip.
         const TOOLBAR_RESERVE = 68;
-        const measure = () => {
-          const el = containerRef.current;
+        /** Usable box for the SDK: never larger than what's visible below the header. */
+        const boxSize = () => {
+          const el = wrapperRef.current ?? containerRef.current;
           const rect = el?.getBoundingClientRect();
           const width = Math.floor(rect?.width || el?.clientWidth || window.innerWidth);
-          // Cap height to the space actually visible below the header so Zoom's
-          // gallery tiles shrink to fit instead of pushing the page taller.
-          const headerBottom = Math.max(0, Math.floor(rect?.top ?? 72));
-          const available = Math.floor((window.visualViewport?.height || window.innerHeight) - headerBottom);
-          const measured = Math.floor(rect?.height || el?.clientHeight || available);
-          const height = Math.min(measured, available > 0 ? available : measured) - TOOLBAR_RESERVE;
+          const top = Math.max(0, Math.floor(rect?.top ?? 72));
+          const viewport = Math.floor(window.visualViewport?.height || window.innerHeight);
+          const visible = Math.max(180, viewport - top);
+          const declared = Math.floor(availableHeight || rect?.height || visible);
           return {
             width: Math.max(240, width),
-            height: Math.max(180, height),
+            height: Math.max(180, Math.min(declared, visible)),
           };
         };
+        /** Video-view size = box minus the toolbar strip, so controls stay visible. */
+        const measure = () => {
+          const box = boxSize();
+          return { width: box.width, height: Math.max(180, box.height - TOOLBAR_RESERVE) };
+        };
+        /** Force the SDK's own root nodes to respect the host box height. */
+        const clampZoomRoot = () => {
+          const host = containerRef.current;
+          if (!host) return;
+          const box = boxSize();
+          host.style.height = `${box.height}px`;
+          host.style.maxHeight = `${box.height}px`;
+          host.style.overflow = "hidden";
+          const nodes = host.querySelectorAll<HTMLElement>(
+            '[class*="MuiPaper-root"], [class*="zoom-app"], [class*="zmwebsdk"]'
+          );
+          nodes.forEach((node) => {
+            node.style.maxHeight = `${box.height}px`;
+            node.style.overflow = "hidden";
+          });
+        };
+
         const size = measure();
         const ribbonWidth = (h: number, w: number) => ({
           width: Math.min(300, Math.max(120, Math.floor(w * 0.35))),
