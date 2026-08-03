@@ -265,8 +265,6 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
       />
     </div>
   );
-
-  );
 };
 
 // Memoized with a constant comparator: after mount this never re-renders.
