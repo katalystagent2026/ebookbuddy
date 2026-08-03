@@ -67,6 +67,7 @@ const MeetingRoom = () => {
       if (cancelled) return;
 
       const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
+      console.log("[MeetingRoom] active setup video_provider:", (account as any)?.video_provider, "-> using:", activeProvider);
       setProvider(activeProvider);
 
       if (activeProvider === "jitsi") {
