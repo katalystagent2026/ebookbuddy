@@ -304,3 +304,18 @@
     box-shadow: var(--shadow-glow-accent);
   }
 }
+
+/* Zoom Client View injects #zmmtg-root into <body>. Keep it hidden unless a
+   meeting is active so it can never cover the rest of the app. */
+#zmmtg-root {
+  display: none;
+}
+
+body.zoom-client-active #zmmtg-root {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+}
