@@ -85,9 +85,12 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           const el = containerRef.current;
           const rect = el?.getBoundingClientRect();
           const width = Math.floor(rect?.width || el?.clientWidth || window.innerWidth);
-          const height = Math.floor(rect?.height || el?.clientHeight || window.innerHeight);
-          // Never exceed the container: Zoom sizes its canvas from these values,
-          // and an oversized value causes clipping/overflow on small screens.
+          // Cap height to the space actually visible below the header so Zoom's
+          // gallery tiles shrink to fit instead of pushing the page taller.
+          const headerBottom = Math.max(0, Math.floor(rect?.top ?? 72));
+          const available = Math.floor((window.visualViewport?.height || window.innerHeight) - headerBottom);
+          const measured = Math.floor(rect?.height || el?.clientHeight || available);
+          const height = Math.min(measured, available > 0 ? available : measured);
           return {
             width: Math.max(240, width),
             height: Math.max(180, height),
@@ -210,7 +213,10 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[480px] flex-1 overflow-visible">
+    <div
+      className="relative w-full h-full flex-1 overflow-visible"
+      style={{ maxHeight: "calc(100dvh - 72px)", minHeight: "280px" }}
+    >
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
           <div className="text-center p-8">
