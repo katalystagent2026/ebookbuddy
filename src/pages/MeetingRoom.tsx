@@ -75,7 +75,7 @@ const MeetingRoom = () => {
         </div>
       </header>
 
-      <main className="safe-container flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4">
+      <main className="safe-container w-full flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4">
 
         {isChecking && (
           <Card className="max-w-md mx-auto shrink-0">
