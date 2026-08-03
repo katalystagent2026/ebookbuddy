@@ -79,6 +79,8 @@ export default function AdminZoom() {
       meeting_id: account.meeting_id,
       passcode: account.passcode,
       is_active: account.is_active,
+      video_provider: account.video_provider === 'jitsi' ? 'jitsi' : 'zoom',
+      jitsi_room_name: account.jitsi_room_name || '',
     });
     setDialogOpen(true);
   };
@@ -95,7 +97,10 @@ export default function AdminZoom() {
       meeting_id: form.meeting_id.replace(/\s/g, ''),
       passcode: form.passcode.trim(),
       is_active: form.is_active,
+      video_provider: form.video_provider,
+      jitsi_room_name: form.jitsi_room_name.trim(),
     };
+
 
     const { error } = editingId
       ? await supabase.from('zoom_accounts').update(payload).eq('id', editingId)
