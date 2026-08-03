@@ -119,7 +119,7 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           const top = Math.max(0, Math.floor(rect?.top ?? 72));
           const viewport = Math.floor(window.visualViewport?.height || window.innerHeight);
           const visible = Math.max(180, viewport - top);
-          const declared = Math.floor(availableHeight || rect?.height || visible);
+          const declared = Math.floor(heightRef.current || rect?.height || visible);
           return {
             width: Math.max(240, width),
             height: Math.max(180, Math.min(declared, visible)),
