@@ -60,7 +60,7 @@ const MeetingRoom = () => {
   const ready = Boolean(meetingId && userName);
 
   return (
-    <div className="h-screen h-[100dvh] flex flex-col bg-gradient-warm overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-gradient-warm">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
         <div className="safe-container py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
