@@ -19,8 +19,9 @@ interface ZoomMeetingFrameProps {
  * never try to reconcile its children — otherwise we get
  * "NotFoundError: Failed to execute 'removeChild' on 'Node'".
  */
-const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
+const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFrameProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<any>(null);
   const startedRef = useRef(false);
   const joinedRef = useRef(false);
@@ -240,8 +241,13 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
   return (
     <div
-      className="relative w-full h-full flex-1 min-h-0 flex flex-col"
-      style={{ height: "100%", maxHeight: "100%" }}
+      ref={wrapperRef}
+      className="relative w-full flex flex-col"
+      style={{
+        height: availableHeight ? `${availableHeight}px` : "100%",
+        maxHeight: availableHeight ? `${availableHeight}px` : "100%",
+        overflow: "hidden",
+      }}
     >
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
@@ -257,16 +263,22 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
         </div>
       )}
       {/* Zoom owns this node. Never render React children inside it.
-          flex-1 fills the wrapper; the video view is sized to leave room for
-          Zoom's bottom toolbar, which must never be clipped. */}
+          This is the direct wrapper of the SDK widget: it is clipped so the
+          SDK's oversized gallery layout can never push the page taller. */}
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="flex-1 min-h-0 w-full rounded-lg flex flex-col"
-        style={{ width: "100%", height: "100%", maxHeight: "100%", overflow: "visible" }}
+        className="w-full rounded-lg flex flex-col"
+        style={{
+          width: "100%",
+          height: availableHeight ? `${availableHeight}px` : "100%",
+          maxHeight: availableHeight ? `${availableHeight}px` : "100%",
+          overflow: "hidden",
+        }}
       />
     </div>
   );
+
 };
 
 // Memoized with a constant comparator: after mount this never re-renders.
