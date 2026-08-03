@@ -17,7 +17,10 @@ const MeetingRoom = () => {
   const [jitsiRoom, setJitsiRoom] = useState("");
   const [isChecking, setIsChecking] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [meetingHeight, setMeetingHeight] = useState(() => Math.max(320, window.innerHeight - 72));
+  // Exact usable pixel height for the video frame (main padding + card border removed).
+  const [frameHeight, setFrameHeight] = useState(() => Math.max(280, window.innerHeight - 72 - 34));
 
 
   useEffect(() => {
@@ -27,7 +30,16 @@ const MeetingRoom = () => {
       frame = requestAnimationFrame(() => {
         frame = 0;
         const headerHeight = Math.ceil(headerRef.current?.getBoundingClientRect().height ?? 72);
-        setMeetingHeight(Math.max(320, window.innerHeight - headerHeight));
+        const viewport = Math.floor(window.visualViewport?.height || window.innerHeight);
+        const available = Math.max(320, viewport - headerHeight);
+        setMeetingHeight(available);
+
+        const cardTop = cardRef.current?.getBoundingClientRect().top;
+        const inner =
+          typeof cardTop === "number"
+            ? Math.floor(viewport - cardTop - 2) // 2px card border
+            : available - (window.innerWidth >= 640 ? 34 : 18);
+        setFrameHeight(Math.max(280, Math.min(inner, available)));
       });
     };
 
