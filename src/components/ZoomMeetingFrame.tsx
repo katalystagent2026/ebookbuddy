@@ -87,8 +87,26 @@ const ZoomMeetingFrameBase = ({ userName, userEmail }: ZoomMeetingFrameProps) =>
         joinedRef.current = true;
         if (disposed) return;
         console.log("[Zoom] joined meeting (Client View)");
+
+        // TEMP DIAGNOSTIC: verify clicks reach Zoom's toolbar handlers and log
+        // whichever element is actually topmost at the click point.
+        const clickProbe = (event: MouseEvent) => {
+          const target = event.target as HTMLElement | null;
+          const topmost = document.elementFromPoint(event.clientX, event.clientY);
+          console.log("[Zoom][click-probe]", {
+            target: target?.className,
+            label: target?.closest("[aria-label]")?.getAttribute("aria-label"),
+            topmost: (topmost as HTMLElement | null)?.className,
+            insideZoomRoot: Boolean(target?.closest("#zmmtg-root")),
+            defaultPrevented: event.defaultPrevented,
+          });
+        };
+        document.addEventListener("click", clickProbe, true);
+        cleanupProbeRef.current = () => document.removeEventListener("click", clickProbe, true);
+
         setStatus("joined");
         toast.success("Successfully joined the meeting!");
+
       } catch (error: any) {
         console.error("[Zoom] failed to join meeting:", error);
         document.body.classList.remove(ZOOM_BODY_CLASS);
