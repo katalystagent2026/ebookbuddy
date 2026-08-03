@@ -40,6 +40,39 @@ Deno.serve(async (req) => {
     const action = String(body?.action ?? "");
     const userId = String(body?.userId ?? "");
 
+    const ALLOWED_ROLES = ["admin", "user", "student", "volunteer"];
+    const isUuid = (v: unknown) => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
+
+    if (action === "create") {
+      const fullName = typeof body?.fullName === "string" ? body.fullName.trim().slice(0, 120) : "";
+      const email = typeof body?.email === "string" ? body.email.trim().slice(0, 255) : "";
+      const password = typeof body?.password === "string" ? body.password : "";
+      const role = ALLOWED_ROLES.includes(body?.role) ? body.role : "volunteer";
+      const zoomAccountId = isUuid(body?.zoomAccountId) ? body.zoomAccountId : null;
+      const isVerified = body?.isVerified === true;
+
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Invalid email address" }, 400);
+      if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+
+      const { data: created, error: createError } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName },
+      });
+      if (createError || !created?.user) return json({ error: createError?.message ?? "Failed to create user" }, 400);
+
+      const newId = created.user.id;
+      await admin.from("profiles").upsert(
+        { user_id: newId, email, full_name: fullName, is_verified: isVerified, zoom_account_id: zoomAccountId },
+        { onConflict: "user_id" },
+      );
+      await admin.from("user_roles").delete().eq("user_id", newId);
+      await admin.from("user_roles").insert({ user_id: newId, role });
+
+      return json({ success: true, userId: newId });
+    }
+
     if (!/^[0-9a-f-]{36}$/i.test(userId)) return json({ error: "Valid userId required" }, 400);
 
     if (action === "delete") {
@@ -69,9 +102,18 @@ Deno.serve(async (req) => {
       const profileUpdate: Record<string, unknown> = {};
       if (fullName !== undefined) profileUpdate.full_name = fullName;
       if (email !== undefined) profileUpdate.email = email;
+      if (typeof body?.isVerified === "boolean") profileUpdate.is_verified = body.isVerified;
+      if (body?.zoomAccountId !== undefined) {
+        profileUpdate.zoom_account_id = isUuid(body.zoomAccountId) ? body.zoomAccountId : null;
+      }
       if (Object.keys(profileUpdate).length > 0) {
         const { error } = await admin.from("profiles").update(profileUpdate).eq("user_id", userId);
         if (error) return json({ error: error.message }, 400);
+      }
+
+      if (typeof body?.role === "string" && ALLOWED_ROLES.includes(body.role)) {
+        await admin.from("user_roles").delete().eq("user_id", userId);
+        await admin.from("user_roles").insert({ user_id: userId, role: body.role });
       }
 
       return json({ success: true });
