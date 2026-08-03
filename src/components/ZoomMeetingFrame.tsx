@@ -188,9 +188,15 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           }
           last = next;
           try {
-            (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
-              default: next,
-              ribbon: ribbonWidth(next.height, next.width),
+            // `updateVideoOptions` is the SDK's real re-layout entry point in
+            // v5.x (there is no `resize()`, and no `updateVideoOptionsViewSizes`
+            // — calling that name was a silent no-op).
+            (clientRef.current as any)?.updateVideoOptions?.({
+              isResizable: false,
+              viewSizes: {
+                default: next,
+                ribbon: ribbonWidth(next.height, next.width),
+              },
             });
           } catch {
             // SDK not ready yet
