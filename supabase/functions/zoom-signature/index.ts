@@ -47,16 +47,8 @@ serve(async (req) => {
     // Caller is authenticated; avoid logging identifying user data.
 
 
-    const { meetingNumber, role = 0 }: SignatureRequest = await req.json();
-
-    if (!meetingNumber || !/^\d{9,12}$/.test(String(meetingNumber).replace(/\s/g, ""))) {
-      return new Response(
-        JSON.stringify({ error: "A valid meeting number is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const requestedMeeting = String(meetingNumber).replace(/\s/g, "");
+    const body = await req.json().catch(() => ({}));
+    const role = (body as SignatureRequest).role ?? 0;
 
     const serviceClient = createClient(
       supabaseUrl,
@@ -86,44 +78,52 @@ serve(async (req) => {
       );
     }
 
-
-
-    // Prefer an active Zoom setup configured in the admin dashboard
-    const { data: accounts } = await serviceClient
+    // Always read the single ACTIVE Zoom Setup row — never trust client-supplied values
+    const { data: activeAccount, error: accountError } = await serviceClient
       .from("zoom_accounts")
-      .select("sdk_key, sdk_secret, meeting_id, passcode")
-      .eq("is_active", true);
+      .select("id, name, meeting_id, passcode, sdk_key, sdk_secret, is_active, updated_at")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const matchedAccount = (accounts ?? []).find(
-      (a: { meeting_id: string | null }) =>
-        String(a.meeting_id ?? "").replace(/\s/g, "") === requestedMeeting,
+    if (accountError) {
+      console.error("Failed to read active zoom account:", accountError.message);
+    }
+
+    if (!activeAccount?.meeting_id) {
+      return new Response(
+        JSON.stringify({ error: "No active Zoom meeting configured" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(
+      "Active Zoom Setup row:",
+      JSON.stringify({
+        id: activeAccount.id,
+        name: activeAccount.name,
+        meeting_id: activeAccount.meeting_id,
+        is_active: activeAccount.is_active,
+        updated_at: activeAccount.updated_at,
+        has_passcode: Boolean(activeAccount.passcode),
+        has_sdk_key: Boolean(activeAccount.sdk_key),
+        has_sdk_secret: Boolean(activeAccount.sdk_secret),
+      }),
     );
 
-    let sdkKey = matchedAccount?.sdk_key || "";
-    let sdkSecret = matchedAccount?.sdk_secret || "";
-    let passcode = matchedAccount?.passcode || "";
-
-    if (!matchedAccount) {
-      // Fall back to the legacy single meeting config + platform secrets
-      const { data: config } = await serviceClient
-        .from("zoom_config")
-        .select("meeting_id, passcode")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const configuredMeeting = String(config?.meeting_id ?? "").replace(/\s/g, "");
-      if (!configuredMeeting || configuredMeeting !== requestedMeeting) {
-        return new Response(
-          JSON.stringify({ error: "Meeting not allowed" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      passcode = config?.passcode ?? "";
-      sdkKey = Deno.env.get("ZOOM_SDK_KEY") ?? "";
-      sdkSecret = Deno.env.get("ZOOM_SDK_SECRET") ?? "";
+    const requestedMeeting = String(activeAccount.meeting_id).replace(/\s/g, "");
+    if (!/^\d{9,12}$/.test(requestedMeeting)) {
+      return new Response(
+        JSON.stringify({ error: "Configured meeting number is invalid" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const passcode = activeAccount.passcode ?? "";
+    const sdkKey = activeAccount.sdk_key || Deno.env.get("ZOOM_SDK_KEY") || "";
+    const sdkSecret = activeAccount.sdk_secret || Deno.env.get("ZOOM_SDK_SECRET") || "";
+
 
 
     if (!sdkKey || !sdkSecret) {
