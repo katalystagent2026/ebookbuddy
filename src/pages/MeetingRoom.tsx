@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Video, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,17 +160,6 @@ const MeetingRoom = () => {
     }
   };
 
-  const handleLeaveMeeting = () => {
-    if (zoomClientRef.current) {
-      try {
-        zoomClientRef.current.leaveMeeting();
-      } catch {
-        // Meeting might not be active
-      }
-    }
-    setIsInMeeting(false);
-    toast.info("You have left the meeting");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -215,110 +202,42 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Join Form */}
-          <div className="lg:col-span-1">
-            <Card className={isInMeeting ? "opacity-50 pointer-events-none" : ""}>
-              <CardHeader>
-                <CardTitle className="font-heading">Join a Meeting</CardTitle>
-                <CardDescription>
-                  Enter your meeting details to join
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userName">Your Name</Label>
-                  <Input
-                    id="userName"
-                    placeholder="Enter your display name"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    disabled={isLoading || isSdkLoading}
-                  />
+        {!isSdkLoading && !meetingId && (
+          <Card className="max-w-md mx-auto mb-8">
+            <CardContent className="pt-6 text-center">
+              <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-heading font-semibold text-muted-foreground mb-2">
+                No Active Meeting
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                There is no active Zoom meeting configured. Please contact an administrator.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Meeting Container */}
+        <Card className="h-full min-h-[600px]">
+          <CardContent className="p-0 h-full">
+            <div
+              ref={meetingContainerRef}
+              id="zoom-meeting-container"
+              className="w-full h-full min-h-[600px] rounded-lg overflow-hidden bg-muted flex items-center justify-center"
+            >
+              {!isInMeeting && meetingId && (
+                <div className="text-center p-8">
+                  <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto mb-4" />
+                  <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
+                    Joining Meeting...
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Please wait while we connect you to the video call
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="meetingId">Meeting ID</Label>
-                  <Input
-                    id="meetingId"
-                    placeholder="123 456 7890"
-                    value={meetingId}
-                    onChange={(e) => setMeetingId(e.target.value)}
-                    disabled={isLoading || isSdkLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="passcode">Passcode (optional)</Label>
-                  <Input
-                    id="passcode"
-                    type="password"
-                    placeholder="Meeting passcode"
-                    value={passcode}
-                    onChange={(e) => setPasscode(e.target.value)}
-                    disabled={isLoading || isSdkLoading}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleJoinMeeting}
-                  disabled={isLoading || isSdkLoading || !meetingId || !userName}
-                  className="w-full"
-                  variant="hero"
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Joining...
-                    </>
-                  ) : (
-                    <>
-                      <Video className="h-4 w-4" />
-                      Join Meeting
-                    </>
-                  )}
-                </Button>
-
-                {isInMeeting && (
-                  <Button
-                    onClick={handleLeaveMeeting}
-                    variant="destructive"
-                    className="w-full"
-                    size="lg"
-                  >
-                    Leave Meeting
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Meeting Container */}
-          <div className="lg:col-span-2">
-            <Card className="h-full min-h-[500px]">
-              <CardContent className="p-0 h-full">
-                <div
-                  ref={meetingContainerRef}
-                  id="zoom-meeting-container"
-                  className="w-full h-full min-h-[500px] rounded-lg overflow-hidden bg-muted flex items-center justify-center"
-                >
-                  {!isInMeeting && (
-                    <div className="text-center p-8">
-                      <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-heading font-semibold text-muted-foreground mb-2">
-                        Ready to Join
-                      </h3>
-                      <p className="text-sm text-muted-foreground max-w-sm">
-                        Enter your meeting details and click "Join Meeting" to start your video call
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
