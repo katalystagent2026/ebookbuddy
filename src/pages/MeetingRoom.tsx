@@ -67,6 +67,7 @@ const MeetingRoom = () => {
       if (cancelled) return;
 
       const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
+      console.log("[MeetingRoom] active setup video_provider:", (account as any)?.video_provider, "-> using:", activeProvider);
       setProvider(activeProvider);
 
       if (activeProvider === "jitsi") {
@@ -154,9 +155,11 @@ const MeetingRoom = () => {
 
             {ready ? (
               provider === "jitsi" ? (
-                <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />
+                (console.log("[MeetingRoom] rendering JitsiMeetingFrame (no zoom-signature call), room:", jitsiRoom),
+                <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />)
               ) : (
-                <ZoomMeetingFrame userName={userName} />
+                (console.log("[MeetingRoom] rendering ZoomMeetingFrame (will call zoom-signature)"),
+                <ZoomMeetingFrame userName={userName} />)
               )
             ) : (
               <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
