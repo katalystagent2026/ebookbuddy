@@ -166,9 +166,10 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
               // User-dragged resizing lets the widget escape the host box.
               isResizable: false,
               popper: { disableDraggable: true },
-              // Init-only option (does nothing post-init): start in speaker
-              // view so 2 participants don't immediately force a tall grid.
-              defaultViewType: "speaker",
+              // NOTE: `defaultViewType` is intentionally NOT set here. It is an
+              // init-only option and setting it to "speaker" is a known cause of
+              // the control toolbar not rendering at all. We force the view type
+              // at runtime with `setViewType` instead (see below).
               viewSizes: { default: size, ribbon: ribbonWidth(size.height, size.width) },
             },
           },
