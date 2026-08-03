@@ -24,10 +24,50 @@ const Dashboard = () => {
       const { data, error } = await supabase.rpc("can_join_active_meeting", {
         _user_id: user.id,
       });
+
+      // --- TEMPORARY DEBUG LOGGING (meeting permission check) ---
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id, is_verified, zoom_account_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const { data: setups, error: setupsError } = await supabase
+        .from("zoom_accounts")
+        .select("id, name, is_active");
+
+      const activeSetup = (setups ?? []).find((s) => s.is_active);
+      const linkedSetup = (setups ?? []).find((s) => s.id === profile?.zoom_account_id);
+
+      console.log("[join-check] volunteer record:", {
+        profileId: profile?.id,
+        verified: profile?.is_verified,
+        zoomAccountId: profile?.zoom_account_id,
+        zoomRoomName: linkedSetup?.name ?? null,
+        linkedSetupIsActive: linkedSetup?.is_active ?? null,
+        profileError: profileError?.message ?? null,
+      });
+      console.log("[join-check] all setup rows:", setups, setupsError?.message ?? null);
+      console.log("[join-check] active setup row compared against:", {
+        id: activeSetup?.id ?? null,
+        name: activeSetup?.name ?? null,
+        is_active: activeSetup?.is_active ?? null,
+      });
+      console.log("[join-check] comparison result:", {
+        verified: profile?.is_verified === true,
+        nameMatch: !!linkedSetup?.name && linkedSetup?.name === activeSetup?.name,
+        idMatch: !!profile?.zoom_account_id && profile?.zoom_account_id === activeSetup?.id,
+        rpcResult: data,
+        rpcError: error?.message ?? null,
+        finalCanJoin: !error && data === true,
+      });
+      // --- END TEMPORARY DEBUG LOGGING ---
+
       if (cancelled) return;
       setCanJoin(!error && data === true);
       setCheckingAccess(false);
     })();
+
     return () => {
       cancelled = true;
     };
