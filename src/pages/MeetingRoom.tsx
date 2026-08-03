@@ -144,10 +144,11 @@ const MeetingRoom = () => {
         await zoomClientRef.current.join({
           signature: signatureData.signature,
           sdkKey: signatureData.sdkKey,
-          meetingNumber: meetingId.replace(/\s/g, ""),
-          password: passcode,
+          meetingNumber: String(signatureData.meetingNumber),
+          password: signatureData.passcode ?? passcode,
           userName: userName,
         });
+
 
         setIsInMeeting(true);
         toast.success("Successfully joined the meeting!");
