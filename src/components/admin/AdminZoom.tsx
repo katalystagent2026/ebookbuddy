@@ -23,6 +23,8 @@ interface ZoomAccount {
   passcode: string;
   is_active: boolean;
   created_at: string;
+  video_provider: 'zoom' | 'jitsi';
+  jitsi_room_name: string;
 }
 
 const emptyForm = {
@@ -30,7 +32,10 @@ const emptyForm = {
   meeting_id: '',
   passcode: '',
   is_active: true,
+  video_provider: 'zoom' as 'zoom' | 'jitsi',
+  jitsi_room_name: '',
 };
+
 
 export default function AdminZoom() {
   const [accounts, setAccounts] = useState<ZoomAccount[]>([]);
