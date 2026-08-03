@@ -57,11 +57,13 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
         await client.join({
           signature: signatureData.signature,
+          // Zoom now expects `appKey`; typings still reference the deprecated `sdkKey`.
           appKey: signatureData.appKey ?? signatureData.sdkKey,
           meetingNumber: String(signatureData.meetingNumber),
           password: signatureData.passcode ?? "",
           userName,
-        });
+        } as any);
+
 
         joinedRef.current = true;
         if (disposed) return;
