@@ -121,8 +121,32 @@ serve(async (req) => {
     }
 
     const passcode = activeAccount.passcode ?? "";
-    const sdkKey = activeAccount.sdk_key || Deno.env.get("ZOOM_SDK_KEY") || "";
-    const sdkSecret = activeAccount.sdk_secret || Deno.env.get("ZOOM_SDK_SECRET") || "";
+
+    // Zoom SDK credentials come exclusively from the API Credentials table ("Zoom SDK")
+    const { data: zoomCredential, error: credentialError } = await serviceClient
+      .from("api_credentials")
+      .select("id, name, api_credential_entries(type, key_value)")
+      .eq("name", "Zoom SDK")
+      .maybeSingle();
+
+    if (credentialError) {
+      console.error("Failed to read Zoom SDK credential:", credentialError.message);
+    }
+
+    if (!zoomCredential) {
+      return new Response(
+        JSON.stringify({ error: 'No "Zoom SDK" credential found in API Credentials.' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    type Entry = { type: string | null; key_value: string | null };
+    const entries = (zoomCredential.api_credential_entries ?? []) as Entry[];
+    const findEntry = (label: string) =>
+      entries.find((e) => (e.type ?? "").trim().toLowerCase() === label)?.key_value?.trim() ?? "";
+
+    const sdkKey = findEntry("client id");
+    const sdkSecret = findEntry("client secret");
 
     // TEMPORARY DEBUG LOG — remove once Zoom credentials are confirmed working.
     // Never logs the full secret: only presence, length, and a masked preview.
@@ -131,7 +155,7 @@ serve(async (req) => {
     console.log(
       "Zoom SDK credential check:",
       JSON.stringify({
-        source: activeAccount.sdk_secret ? "zoom_accounts" : "env",
+        source: "database",
         client_secret_retrieved: Boolean(sdkSecret),
         client_secret_length: sdkSecret.length,
         client_secret_masked: maskSecret(sdkSecret),
@@ -139,14 +163,12 @@ serve(async (req) => {
       }),
     );
 
-
-
-
-
     if (!sdkKey || !sdkSecret) {
-      console.error("Missing Zoom SDK credentials for the requested meeting");
+      console.error('Incomplete "Zoom SDK" credential: missing Client ID or Client Secret');
       return new Response(
-        JSON.stringify({ error: "Zoom SDK credentials not configured." }),
+        JSON.stringify({
+          error: 'The "Zoom SDK" credential is missing a Client ID or Client Secret value.',
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
