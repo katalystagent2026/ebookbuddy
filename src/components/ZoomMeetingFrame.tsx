@@ -65,22 +65,46 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           console.log("[Zoom] meeting ended for user:", reason);
           navigateRef.current("/dashboard", { replace: true });
         };
-        try {
-          client.on("connection-change", (payload: any) => {
-            const state = payload?.state;
-            if (state === "Closed" || state === "Fail") handleMeetingEnded(`connection-change:${state}`);
-          });
-          client.on("meeting-status" as any, (payload: any) => {
-            // 3 = ended, 4 = failed in Zoom's MeetingStatus enum
-            if (payload?.meetingStatus === 3 || payload?.meetingStatus === 4) {
-              handleMeetingEnded(`meeting-status:${payload?.meetingStatus}`);
-            }
-          });
-        } catch {
-          // event names vary across SDK versions; ignore unsupported ones
+
+        // Log every lifecycle event so the correct one can be identified if a
+        // given SDK version renames it.
+        const LIFECYCLE_EVENTS = [
+          "connection-change",
+          "meeting-status",
+          "onMeetingStatus",
+          "leave-meeting",
+          "meeting-ended",
+          "closed",
+          "user-removed",
+        ];
+        for (const evt of LIFECYCLE_EVENTS) {
+          try {
+            client.on(evt as any, (payload: any) => {
+              const status =
+                payload?.state ?? payload?.meetingStatus ?? payload?.status ?? JSON.stringify(payload ?? {});
+              console.log(`[Zoom] leave event fired, status: ${status} (event: ${evt})`);
+
+              const ended =
+                status === "Closed" ||
+                status === "Fail" ||
+                status === "ENDED" ||
+                payload?.meetingStatus === 3 ||
+                payload?.meetingStatus === 4 ||
+                evt === "leave-meeting" ||
+                evt === "meeting-ended" ||
+                evt === "closed";
+
+              if (ended) handleMeetingEnded(`${evt}:${status}`);
+            });
+          } catch {
+            // event names vary across SDK versions; ignore unsupported ones
+          }
         }
 
 
+        // Zoom renders its control toolbar at the bottom of the root node, so we
+        // hand the video view a height that already excludes that strip.
+        const TOOLBAR_RESERVE = 68;
         const measure = () => {
           const el = containerRef.current;
           const rect = el?.getBoundingClientRect();
@@ -90,7 +114,7 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           const headerBottom = Math.max(0, Math.floor(rect?.top ?? 72));
           const available = Math.floor((window.visualViewport?.height || window.innerHeight) - headerBottom);
           const measured = Math.floor(rect?.height || el?.clientHeight || available);
-          const height = Math.min(measured, available > 0 ? available : measured);
+          const height = Math.min(measured, available > 0 ? available : measured) - TOOLBAR_RESERVE;
           return {
             width: Math.max(240, width),
             height: Math.max(180, height),
@@ -214,7 +238,7 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
   return (
     <div
-      className="relative w-full h-full flex-1 min-h-0 overflow-hidden"
+      className="relative w-full h-full flex-1 min-h-0 flex flex-col"
       style={{ height: "100%", maxHeight: "100%" }}
     >
       {status !== "joined" && (
@@ -230,15 +254,16 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
           </div>
         </div>
       )}
-      {/* Zoom owns this node. Never render React children inside it. */}
+      {/* Zoom owns this node. Never render React children inside it.
+          flex-1 fills the wrapper; the video view is sized to leave room for
+          Zoom's bottom toolbar, which must never be clipped. */}
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="absolute inset-0 min-h-0 rounded-lg overflow-hidden"
-        style={{ width: "100%", height: "100%", maxHeight: "100%" }}
+        className="flex-1 min-h-0 w-full rounded-lg flex flex-col"
+        style={{ width: "100%", height: "100%", maxHeight: "100%", overflow: "visible" }}
       />
     </div>
-
   );
 };
 
