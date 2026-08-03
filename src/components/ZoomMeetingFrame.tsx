@@ -122,6 +122,10 @@ const ZoomMeetingFrameBase = ({ userName, userEmail }: ZoomMeetingFrameProps) =>
     return () => {
       disposed = true;
       document.body.classList.remove(ZOOM_BODY_CLASS);
+      cleanupProbeRef.current?.();
+      cleanupProbeRef.current = null;
+
+
 
       const ZoomMtg = sdkRef.current;
       sdkRef.current = null;
