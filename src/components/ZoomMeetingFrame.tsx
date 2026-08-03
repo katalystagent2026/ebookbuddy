@@ -21,6 +21,8 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   const clientRef = useRef<any>(null);
   const startedRef = useRef(false);
   const joinedRef = useRef(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
   const [status, setStatus] = useState<"loading" | "joined" | "error">("loading");
   const [message, setMessage] = useState("Connecting you to the video call…");
 
@@ -112,6 +114,8 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
     return () => {
       disposed = true;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       const client = clientRef.current;
       clientRef.current = null;
       if (!client) return;
@@ -132,7 +136,7 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[600px]">
+    <div className="relative w-full h-full min-h-0 flex-1">
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
           <div className="text-center p-8">
@@ -150,9 +154,10 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="w-full h-full min-h-[600px] rounded-lg overflow-hidden"
+        className="absolute inset-0 w-full h-full rounded-lg overflow-hidden"
       />
     </div>
+
   );
 };
 
