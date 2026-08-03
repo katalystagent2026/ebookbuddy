@@ -58,13 +58,25 @@ const MeetingRoom = () => {
     (async () => {
       const { data: account } = await supabase
         .from("zoom_accounts")
-        .select("meeting_id")
+        .select("meeting_id, video_provider, jitsi_room_name")
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (cancelled) return;
+
+      const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
+      setProvider(activeProvider);
+
+      if (activeProvider === "jitsi") {
+        const room = ((account as any)?.jitsi_room_name || "").trim();
+        setJitsiRoom(room);
+        setMeetingId(room || null);
+        setIsChecking(false);
+        return;
+      }
+
       if (account?.meeting_id) {
         setMeetingId(account.meeting_id);
         setIsChecking(false);
@@ -87,6 +99,8 @@ const MeetingRoom = () => {
   }, [user]);
 
   const ready = Boolean(meetingId && userName);
+
+
 
   return (
     <div className="h-screen h-[100dvh] overflow-hidden flex flex-col bg-gradient-warm">
