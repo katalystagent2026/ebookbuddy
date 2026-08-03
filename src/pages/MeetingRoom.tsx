@@ -6,15 +6,19 @@ import { ArrowLeft, Video, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ZoomMeetingFrame from "@/components/ZoomMeetingFrame";
+import JitsiMeetingFrame from "@/components/JitsiMeetingFrame";
 
 const MeetingRoom = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [userName, setUserName] = useState("");
   const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
+  const [jitsiRoom, setJitsiRoom] = useState("");
   const [isChecking, setIsChecking] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
   const [meetingHeight, setMeetingHeight] = useState(() => Math.max(320, window.innerHeight - 72));
+
 
   useEffect(() => {
     let frame = 0;
