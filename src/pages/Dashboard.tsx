@@ -21,10 +21,6 @@ const Dashboard = () => {
     }
     setCheckingAccess(true);
     (async () => {
-      const { data, error } = await supabase.rpc("can_join_active_meeting", {
-        _user_id: user.id,
-      });
-
       // --- TEMPORARY DEBUG LOGGING (meeting permission check) ---
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -39,6 +35,12 @@ const Dashboard = () => {
 
       const activeSetup = (setups ?? []).find((s) => s.is_active);
       const linkedSetup = (setups ?? []).find((s) => s.id === profile?.zoom_account_id);
+      const finalCanJoin =
+        !profileError &&
+        !setupsError &&
+        profile?.is_verified === true &&
+        !!profile.zoom_account_id &&
+        profile.zoom_account_id === activeSetup?.id;
 
       console.log("[join-check] volunteer record:", {
         profileId: profile?.id,
@@ -58,14 +60,12 @@ const Dashboard = () => {
         verified: profile?.is_verified === true,
         nameMatch: !!linkedSetup?.name && linkedSetup?.name === activeSetup?.name,
         idMatch: !!profile?.zoom_account_id && profile?.zoom_account_id === activeSetup?.id,
-        rpcResult: data,
-        rpcError: error?.message ?? null,
-        finalCanJoin: !error && data === true,
+        finalCanJoin,
       });
       // --- END TEMPORARY DEBUG LOGGING ---
 
       if (cancelled) return;
-      setCanJoin(!error && data === true);
+      setCanJoin(finalCanJoin);
       setCheckingAccess(false);
     })();
 
