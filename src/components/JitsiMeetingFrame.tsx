@@ -10,6 +10,11 @@ interface JitsiMeetingFrameProps {
 const JITSI_DOMAIN = "meet.jit.si";
 const SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
 
+/** Counts every mount of this component for debugging remount loops. */
+let mountCount = 0;
+/** Guards against a second JitsiMeetExternalAPI instance for the same room. */
+let activeInstance: { room: string; api: any } | null = null;
+
 const loadJitsiScript = () =>
   new Promise<void>((resolve, reject) => {
     if ((window as any).JitsiMeetExternalAPI) {
@@ -36,8 +41,10 @@ const loadJitsiScript = () =>
  * everything inside it.
  */
 const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) => {
+  mountCount += 1;
+  console.log(`[Jitsi] component mounting/initializing (render/mount #${mountCount})`, { roomName });
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef = useRef<any>(null);
   const startedRef = useRef(false);
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
@@ -47,20 +54,36 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
   const [message, setMessage] = useState("Connecting you to the video call…");
 
   useEffect(() => {
-    if (startedRef.current) return;
+    if (startedRef.current) {
+      console.log("[Jitsi] effect re-ran but init already started — skipping");
+      return;
+    }
     startedRef.current = true;
 
-    let disposed = false;
+    // A previous instance for this same room is still alive (fast remount /
+    // StrictMode double-invoke). Re-attach instead of re-initializing.
+    if (activeInstance && activeInstance.room === roomName && containerRef.current) {
+      const iframe = activeInstance.api.getIFrame?.();
+      if (iframe && containerRef.current !== iframe.parentNode) {
+        console.log("[Jitsi] re-attaching existing iframe, no re-init");
+        containerRef.current.appendChild(iframe);
+      }
+      setStatus("joined");
+      return;
+    }
+
+    let cancelled = false;
 
     (async () => {
       try {
         if (!roomName) throw new Error("No meeting room configured. Please contact an administrator.");
         await loadJitsiScript();
-        if (disposed || !containerRef.current) return;
+        if (cancelled || !containerRef.current) return;
 
         const JitsiMeetExternalAPI = (window as any).JitsiMeetExternalAPI;
         if (!JitsiMeetExternalAPI) throw new Error("Jitsi Meet failed to initialize");
 
+        console.log("[Jitsi] creating JitsiMeetExternalAPI (once)", { roomName });
         const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, {
           roomName,
           parentNode: containerRef.current,
@@ -69,30 +92,47 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
           userInfo: { displayName: userName },
           configOverwrite: { prejoinPageEnabled: false },
         });
-        apiRef.current = api;
+        activeInstance = { room: roomName, api };
 
         api.addEventListener("videoConferenceJoined", () => {
           console.log("[Jitsi] videoConferenceJoined fired");
           setStatus("joined");
         });
-        const leave = () => navigateRef.current("/dashboard");
+        const leave = () => {
+          try {
+            api.dispose?.();
+          } catch {
+            // already disposed
+          }
+          if (activeInstance?.api === api) activeInstance = null;
+          navigateRef.current("/dashboard");
+        };
         api.addEventListener("videoConferenceLeft", leave);
         api.addEventListener("readyToClose", leave);
       } catch (error: any) {
-        if (disposed) return;
+        if (cancelled) return;
         setStatus("error");
         setMessage(error?.message || "Something went wrong joining the meeting.");
       }
     })();
 
     return () => {
-      disposed = true;
-      try {
-        apiRef.current?.dispose?.();
-      } catch {
-        // already disposed
-      }
-      apiRef.current = null;
+      cancelled = true;
+      // Defer teardown so a synchronous remount (StrictMode / parent churn)
+      // can re-attach the same instance instead of restarting the join flow.
+      const api = activeInstance?.api;
+      setTimeout(() => {
+        if (!api || activeInstance?.api !== api) return;
+        const iframe = api.getIFrame?.();
+        if (iframe && document.body.contains(iframe)) return; // re-attached, keep alive
+        console.log("[Jitsi] disposing instance");
+        try {
+          api.dispose?.();
+        } catch {
+          // already disposed
+        }
+        activeInstance = null;
+      }, 300);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
