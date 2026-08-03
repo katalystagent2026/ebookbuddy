@@ -326,7 +326,11 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
 
 };
 
-// Memoized with a constant comparator: after mount this never re-renders.
-export const ZoomMeetingFrame = memo(ZoomMeetingFrameBase, () => true);
+// Re-renders ONLY when the available height changes (styles only — the init
+// effect has empty deps, so Zoom is never re-initialized).
+export const ZoomMeetingFrame = memo(
+  ZoomMeetingFrameBase,
+  (prev, next) => prev.availableHeight === next.availableHeight
+);
 
 export default ZoomMeetingFrame;
