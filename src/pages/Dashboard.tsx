@@ -32,9 +32,9 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const { data: setups, error: setupsError } = await supabase.rpc(
-        "get_meeting_setups"
-      );
+      const { data: setups, error: setupsError } = await supabase
+        .from("zoom_accounts")
+        .select("id, name, is_active, video_provider");
 
 
       const activeSetup = (setups ?? []).find((s) => s.is_active);
