@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,31 @@ const MeetingRoom = () => {
   const [userName, setUserName] = useState("");
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const headerRef = useRef<HTMLElement>(null);
+  const [meetingHeight, setMeetingHeight] = useState(() => Math.max(320, window.innerHeight - 72));
+
+  useEffect(() => {
+    let frame = 0;
+    const updateHeight = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const headerHeight = Math.ceil(headerRef.current?.getBoundingClientRect().height ?? 72);
+        setMeetingHeight(Math.max(320, window.innerHeight - headerHeight));
+      });
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    window.addEventListener("orientationchange", updateHeight);
+    window.visualViewport?.addEventListener("resize", updateHeight);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateHeight);
+      window.removeEventListener("orientationchange", updateHeight);
+      window.visualViewport?.removeEventListener("resize", updateHeight);
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -60,8 +85,8 @@ const MeetingRoom = () => {
   const ready = Boolean(meetingId && userName);
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-gradient-warm">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
+    <div className="h-screen h-[100dvh] overflow-hidden flex flex-col bg-gradient-warm">
+      <header ref={headerRef} className="border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
         <div className="safe-container py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
@@ -76,12 +101,10 @@ const MeetingRoom = () => {
       </header>
 
       <main
-        className="safe-container w-full flex-1 min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4"
+        className="safe-container w-full min-h-0 flex flex-col px-2 sm:px-4 py-2 sm:py-4 gap-3 sm:gap-4 overflow-hidden"
         style={{
-          height: "calc(100dvh - 72px)",
-          maxHeight: "calc(100dvh - 72px)",
-          minHeight: "320px",
-          overflowY: "auto",
+          height: `${meetingHeight}px`,
+          maxHeight: `${meetingHeight}px`,
         }}
       >
 
@@ -108,8 +131,8 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <Card className="flex-1 min-h-0 flex flex-col overflow-visible">
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-visible">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
 
             {ready ? (
               <ZoomMeetingFrame userName={userName} />

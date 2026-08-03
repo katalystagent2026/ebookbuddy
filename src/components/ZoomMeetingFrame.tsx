@@ -214,8 +214,8 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
 
   return (
     <div
-      className="relative w-full h-full flex-1 overflow-visible"
-      style={{ maxHeight: "calc(100dvh - 72px)", minHeight: "280px" }}
+      className="relative w-full h-full flex-1 min-h-0 overflow-hidden"
+      style={{ height: "100%", maxHeight: "100%" }}
     >
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
@@ -234,8 +234,8 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
       <div
         ref={containerRef}
         id="zoom-meeting-container"
-        className="absolute inset-0 rounded-lg"
-        style={{ width: "100%", height: "100%", overflow: "visible" }}
+        className="absolute inset-0 min-h-0 rounded-lg overflow-hidden"
+        style={{ width: "100%", height: "100%", maxHeight: "100%" }}
       />
     </div>
 
