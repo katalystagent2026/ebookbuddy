@@ -71,7 +71,10 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
         });
         apiRef.current = api;
 
-        api.addEventListener("videoConferenceJoined", () => setStatus("joined"));
+        api.addEventListener("videoConferenceJoined", () => {
+          console.log("[Jitsi] videoConferenceJoined fired");
+          setStatus("joined");
+        });
         const leave = () => navigateRef.current("/dashboard");
         api.addEventListener("videoConferenceLeft", leave);
         api.addEventListener("readyToClose", leave);
