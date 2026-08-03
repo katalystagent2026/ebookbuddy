@@ -162,7 +162,7 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Card ref={cardRef} className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
 
             {ready ? (
@@ -170,8 +170,8 @@ const MeetingRoom = () => {
                 (console.log("[MeetingRoom] rendering JitsiMeetingFrame (no zoom-signature call), room:", jitsiRoom),
                 <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />)
               ) : (
-                (console.log("[MeetingRoom] rendering ZoomMeetingFrame (will call zoom-signature)"),
-                <ZoomMeetingFrame userName={userName} />)
+                (console.log("[MeetingRoom] rendering ZoomMeetingFrame, frameHeight:", frameHeight),
+                <ZoomMeetingFrame userName={userName} availableHeight={frameHeight} />)
               )
             ) : (
               <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
