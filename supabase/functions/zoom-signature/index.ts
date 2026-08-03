@@ -124,6 +124,23 @@ serve(async (req) => {
     const sdkKey = activeAccount.sdk_key || Deno.env.get("ZOOM_SDK_KEY") || "";
     const sdkSecret = activeAccount.sdk_secret || Deno.env.get("ZOOM_SDK_SECRET") || "";
 
+    // TEMPORARY DEBUG LOG — remove once Zoom credentials are confirmed working.
+    // Never logs the full secret: only presence, length, and a masked preview.
+    const maskSecret = (value: string) =>
+      value.length <= 8 ? "*".repeat(value.length) : `${value.slice(0, 4)}...${value.slice(-4)}`;
+    console.log(
+      "Zoom SDK credential check:",
+      JSON.stringify({
+        source: activeAccount.sdk_secret ? "zoom_accounts" : "env",
+        client_secret_retrieved: Boolean(sdkSecret),
+        client_secret_length: sdkSecret.length,
+        client_secret_masked: maskSecret(sdkSecret),
+        client_id_retrieved: Boolean(sdkKey),
+      }),
+    );
+
+
+
 
 
     if (!sdkKey || !sdkSecret) {
