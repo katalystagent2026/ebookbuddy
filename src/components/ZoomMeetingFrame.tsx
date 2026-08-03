@@ -31,6 +31,9 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
   const leftRef = useRef(false);
+  // Always the latest height, readable from the mount-once effect closure.
+  const heightRef = useRef(availableHeight);
+  heightRef.current = availableHeight;
 
 
 
