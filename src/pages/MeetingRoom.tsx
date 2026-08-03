@@ -160,17 +160,6 @@ const MeetingRoom = () => {
     }
   };
 
-  const handleLeaveMeeting = () => {
-    if (zoomClientRef.current) {
-      try {
-        zoomClientRef.current.leaveMeeting();
-      } catch {
-        // Meeting might not be active
-      }
-    }
-    setIsInMeeting(false);
-    toast.info("You have left the meeting");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-warm">
