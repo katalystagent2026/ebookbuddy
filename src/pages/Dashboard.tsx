@@ -32,9 +32,10 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const { data: setups, error: setupsError } = await supabase
-        .from("zoom_accounts")
-        .select("id, name, is_active");
+      const { data: setups, error: setupsError } = await supabase.rpc(
+        "get_meeting_setups"
+      );
+
 
       const activeSetup = (setups ?? []).find((s) => s.is_active);
       const linkedSetup = (setups ?? []).find((s) => s.id === profile?.zoom_account_id);

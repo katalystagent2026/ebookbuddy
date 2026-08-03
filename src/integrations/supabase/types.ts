@@ -309,6 +309,15 @@ export type Database = {
     }
     Functions: {
       can_join_active_meeting: { Args: { _user_id: string }; Returns: boolean }
+      get_meeting_setups: {
+        Args: never
+        Returns: {
+          id: string
+          is_active: boolean
+          name: string
+          video_provider: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
