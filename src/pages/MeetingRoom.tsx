@@ -103,8 +103,9 @@ const MeetingRoom = () => {
           </Card>
         )}
 
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-visible">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-visible">
+
             {ready ? (
               <ZoomMeetingFrame userName={userName} />
             ) : (
