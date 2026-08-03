@@ -250,27 +250,57 @@ export default function AdminZoom() {
                 placeholder="Reading Room Main"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="zoom-meeting">Meeting ID</Label>
-                <Input
-                  id="zoom-meeting"
-                  value={form.meeting_id}
-                  onChange={(e) => setForm({ ...form, meeting_id: e.target.value })}
-                  placeholder="123 456 7890"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="zoom-pass">Meeting Passcode</Label>
-                <Input
-                  id="zoom-pass"
-                  value={form.passcode}
-                  onChange={(e) => setForm({ ...form, passcode: e.target.value })}
-                  placeholder="Passcode"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-provider">Video Provider</Label>
+              <Select
+                value={form.video_provider}
+                onValueChange={(value) =>
+                  setForm({ ...form, video_provider: value as 'zoom' | 'jitsi' })
+                }
+              >
+                <SelectTrigger id="video-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zoom">Zoom</SelectItem>
+                  <SelectItem value="jitsi">Jitsi Meet</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {form.video_provider === 'jitsi' ? (
+              <div className="space-y-2">
+                <Label htmlFor="jitsi-room">Jitsi Room Name</Label>
+                <Input
+                  id="jitsi-room"
+                  value={form.jitsi_room_name}
+                  onChange={(e) => setForm({ ...form, jitsi_room_name: e.target.value })}
+                  placeholder="ebookbuddy-reading-room"
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="zoom-meeting">Meeting ID</Label>
+                  <Input
+                    id="zoom-meeting"
+                    value={form.meeting_id}
+                    onChange={(e) => setForm({ ...form, meeting_id: e.target.value })}
+                    placeholder="123 456 7890"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zoom-pass">Meeting Passcode</Label>
+                  <Input
+                    id="zoom-pass"
+                    value={form.passcode}
+                    onChange={(e) => setForm({ ...form, passcode: e.target.value })}
+                    placeholder="Passcode"
+                  />
+                </div>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
