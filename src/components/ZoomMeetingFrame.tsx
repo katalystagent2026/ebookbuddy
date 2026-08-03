@@ -157,6 +157,9 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
       disposed = true;
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
+      cleanupResizeRef.current?.();
+      cleanupResizeRef.current = null;
+
       const client = clientRef.current;
       clientRef.current = null;
       if (!client) return;
