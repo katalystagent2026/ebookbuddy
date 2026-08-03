@@ -83,15 +83,20 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
         const JitsiMeetExternalAPI = (window as any).JitsiMeetExternalAPI;
         if (!JitsiMeetExternalAPI) throw new Error("Jitsi Meet failed to initialize");
 
-        console.log("[Jitsi] creating JitsiMeetExternalAPI (once)", { roomName });
-        const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, {
+        const displayName = userName?.trim() || "eBookBuddy User";
+        const initOptions = {
           roomName,
           parentNode: containerRef.current,
           width: "100%",
           height: "100%",
-          userInfo: { displayName: userName },
-          configOverwrite: { prejoinPageEnabled: false },
-        });
+          userInfo: { displayName },
+          configOverwrite: {
+            prejoinPageEnabled: false,
+            prejoinConfig: { enabled: false },
+          },
+        };
+        console.log("[Jitsi] creating JitsiMeetExternalAPI (once)", { roomName, displayName, initOptions });
+        const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, initOptions);
         activeInstance = { room: roomName, api };
 
         api.addEventListener("videoConferenceJoined", () => {
