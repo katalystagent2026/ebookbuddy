@@ -128,9 +128,11 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_verified: boolean
           role_type: string | null
           updated_at: string
           user_id: string
+          zoom_account_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -138,9 +140,11 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          is_verified?: boolean
           role_type?: string | null
           updated_at?: string
           user_id: string
+          zoom_account_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -148,11 +152,21 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_verified?: boolean
           role_type?: string | null
           updated_at?: string
           user_id?: string
+          zoom_account_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_zoom_account_id_fkey"
+            columns: ["zoom_account_id"]
+            isOneToOne: false
+            referencedRelation: "zoom_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       registrations: {
         Row: {
