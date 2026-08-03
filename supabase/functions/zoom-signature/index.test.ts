@@ -113,4 +113,39 @@ Deno.test("returns the current Active Zoom Setup meeting number and passcode", a
   assertEquals(String(json.passcode ?? ""), String(active!.passcode ?? ""));
   assert(typeof json.signature === "string" && (json.signature as string).split(".").length === 3);
   assert(typeof json.sdkKey === "string" && (json.sdkKey as string).length > 0);
+
+  // Decode the signature and assert its claims match the Active Zoom Setup row
+  const payload = decodeJwtPayload(json.signature as string);
+  assertZoomClaims(payload, active!, 0);
+  assertEquals(payload.sdkKey, json.sdkKey);
 });
+
+Deno.test("decoded JWT claims match the Active Zoom Setup row (unit)", async () => {
+  // Build a signature exactly like the edge function does, then decode and assert claims.
+  const { create, getNumericDate } = await import("https://deno.land/x/djwt@v3.0.2/mod.ts");
+
+  const active = { meeting_id: "81253122499" };
+  const sdkKey = "test-sdk-key";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode("test-sdk-secret"),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+
+  const signature = await create({ alg: "HS256", typ: "JWT" }, {
+    sdkKey,
+    mn: Number(active.meeting_id),
+    role: 0,
+    iat: getNumericDate(0) - 30,
+    exp: getNumericDate(7200),
+    appKey: sdkKey,
+    tokenExp: getNumericDate(7200),
+  }, key);
+
+  const payload = decodeJwtPayload(signature);
+  assertZoomClaims(payload, active, 0);
+  assertEquals(payload.sdkKey, sdkKey);
+});
+
