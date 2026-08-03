@@ -169,10 +169,13 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
         // window resizes, orientation changes, and layout shifts.
         let frame = 0;
         let last = { width: 0, height: 0 };
-        const applySize = () => {
+        const applySize = (force = false) => {
           if (disposed) return;
           const next = measure();
-          if (next.width === last.width && next.height === last.height) return;
+          if (!force && next.width === last.width && next.height === last.height) {
+            clampZoomRoot();
+            return;
+          }
           last = next;
           try {
             (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
@@ -182,6 +185,10 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           } catch {
             // SDK not ready yet
           }
+          // The SDK writes its own inline height while re-laying out gallery
+          // tiles, so re-assert the host box afterwards.
+          clampZoomRoot();
+          setTimeout(clampZoomRoot, 150);
         };
         const scheduleApply = () => {
           if (frame) cancelAnimationFrame(frame);
@@ -206,8 +213,22 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
         window.addEventListener("orientationchange", onOrientation);
         window.visualViewport?.addEventListener("resize", scheduleApply);
 
+        // Participant count / view-mode changes make Zoom regrow its layout.
+        for (const evt of ["user-added", "user-removed", "user-updated", "video-active-change", "active-speaker"]) {
+          try {
+            client.on(evt as any, () => {
+              applySize(true);
+              setTimeout(() => applySize(true), 300);
+            });
+          } catch {
+            // unsupported event name in this SDK version
+          }
+        }
+
         resizeObserverRef.current = new ResizeObserver(() => scheduleApply());
-        resizeObserverRef.current.observe(containerRef.current);
+        resizeObserverRef.current.observe(wrapperRef.current ?? containerRef.current);
+        clampZoomRoot();
+
 
 
 
