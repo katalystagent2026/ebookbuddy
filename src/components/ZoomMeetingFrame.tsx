@@ -210,7 +210,10 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[480px] flex-1 overflow-visible">
+    <div
+      className="relative w-full h-full flex-1 overflow-visible"
+      style={{ maxHeight: "calc(100dvh - 72px)", minHeight: "280px" }}
+    >
       {status !== "joined" && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted rounded-lg pointer-events-none">
           <div className="text-center p-8">
