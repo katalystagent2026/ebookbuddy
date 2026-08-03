@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 interface ZoomMeetingFrameProps {
   userName: string;
+  /** Exact usable pixel height handed down by the page (single source of truth). */
+  availableHeight?: number;
 }
 
 /**
