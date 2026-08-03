@@ -102,9 +102,18 @@ Deno.serve(async (req) => {
       const profileUpdate: Record<string, unknown> = {};
       if (fullName !== undefined) profileUpdate.full_name = fullName;
       if (email !== undefined) profileUpdate.email = email;
+      if (typeof body?.isVerified === "boolean") profileUpdate.is_verified = body.isVerified;
+      if (body?.zoomAccountId !== undefined) {
+        profileUpdate.zoom_account_id = isUuid(body.zoomAccountId) ? body.zoomAccountId : null;
+      }
       if (Object.keys(profileUpdate).length > 0) {
         const { error } = await admin.from("profiles").update(profileUpdate).eq("user_id", userId);
         if (error) return json({ error: error.message }, 400);
+      }
+
+      if (typeof body?.role === "string" && ALLOWED_ROLES.includes(body.role)) {
+        await admin.from("user_roles").delete().eq("user_id", userId);
+        await admin.from("user_roles").insert({ user_id: userId, role: body.role });
       }
 
       return json({ success: true });
