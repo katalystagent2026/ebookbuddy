@@ -91,7 +91,7 @@ serve(async (req) => {
     // Prefer an active Zoom setup configured in the admin dashboard
     const { data: accounts } = await serviceClient
       .from("zoom_accounts")
-      .select("sdk_key, sdk_secret, meeting_id")
+      .select("sdk_key, sdk_secret, meeting_id, passcode")
       .eq("is_active", true);
 
     const matchedAccount = (accounts ?? []).find(
@@ -101,12 +101,13 @@ serve(async (req) => {
 
     let sdkKey = matchedAccount?.sdk_key || "";
     let sdkSecret = matchedAccount?.sdk_secret || "";
+    let passcode = matchedAccount?.passcode || "";
 
     if (!matchedAccount) {
       // Fall back to the legacy single meeting config + platform secrets
       const { data: config } = await serviceClient
         .from("zoom_config")
-        .select("meeting_id")
+        .select("meeting_id, passcode")
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -119,9 +120,11 @@ serve(async (req) => {
         );
       }
 
+      passcode = config?.passcode ?? "";
       sdkKey = Deno.env.get("ZOOM_SDK_KEY") ?? "";
       sdkSecret = Deno.env.get("ZOOM_SDK_SECRET") ?? "";
     }
+
 
     if (!sdkKey || !sdkSecret) {
       console.error("Missing Zoom SDK credentials for the requested meeting");
