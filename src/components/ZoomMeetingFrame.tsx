@@ -24,6 +24,11 @@ const ZoomMeetingFrameBase = ({ userName }: ZoomMeetingFrameProps) => {
   const joinedRef = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const cleanupResizeRef = useRef<(() => void) | null>(null);
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const leftRef = useRef(false);
+
 
 
   const [status, setStatus] = useState<"loading" | "joined" | "error">("loading");
