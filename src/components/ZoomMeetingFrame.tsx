@@ -158,10 +158,18 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           language: "en-US",
           patchJsMedia: true,
           leaveOnPageUnload: true,
+          // Cap gallery tiles: the widget grows past its host box when Zoom
+          // tries to lay out a large tile grid inside a short container.
+          maximumVideosInGalleryView: 4,
           customize: {
             video: {
-              isResizable: true,
+              // User-dragged resizing lets the widget escape the host box.
+              isResizable: false,
               popper: { disableDraggable: true },
+              // NOTE: `defaultViewType` is intentionally NOT set here. It is an
+              // init-only option and setting it to "speaker" is a known cause of
+              // the control toolbar not rendering at all. We force the view type
+              // at runtime with `setViewType` instead (see below).
               viewSizes: { default: size, ribbon: ribbonWidth(size.height, size.width) },
             },
           },
@@ -181,12 +189,29 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           }
           last = next;
           try {
-            (clientRef.current as any)?.updateVideoOptionsViewSizes?.({
-              default: next,
-              ribbon: ribbonWidth(next.height, next.width),
+            // `updateVideoOptions` is the SDK's real re-layout entry point in
+            // v5.x (there is no `resize()`, and no `updateVideoOptionsViewSizes`
+            // — calling that name was a silent no-op).
+            (clientRef.current as any)?.updateVideoOptions?.({
+              isResizable: false,
+              viewSizes: {
+                default: next,
+                ribbon: ribbonWidth(next.height, next.width),
+              },
             });
           } catch {
             // SDK not ready yet
+          }
+          // Zoom's documented minimum for Gallery View is 720x411. Below that
+          // the SDK lays the tiles out anyway and grows past the host box
+          // (pushing the toolbar out of view), so drop back to Speaker View.
+          try {
+            const galleryFits = next.width >= 720 && next.height >= 411;
+            // Only ever force a downgrade — never override the user's own
+            // choice of view when there is enough room for it.
+            if (!galleryFits) (clientRef.current as any)?.setViewType?.("speaker");
+          } catch {
+            // setViewType is only valid once the meeting is joined
           }
           // The SDK writes its own inline height while re-laying out gallery
           // tiles, so re-assert the host box afterwards.
