@@ -158,10 +158,17 @@ const ZoomMeetingFrameBase = ({ userName, availableHeight }: ZoomMeetingFramePro
           language: "en-US",
           patchJsMedia: true,
           leaveOnPageUnload: true,
+          // Cap gallery tiles: the widget grows past its host box when Zoom
+          // tries to lay out a large tile grid inside a short container.
+          maximumVideosInGalleryView: 4,
           customize: {
             video: {
-              isResizable: true,
+              // User-dragged resizing lets the widget escape the host box.
+              isResizable: false,
               popper: { disableDraggable: true },
+              // Init-only option (does nothing post-init): start in speaker
+              // view so 2 participants don't immediately force a tall grid.
+              defaultViewType: "speaker",
               viewSizes: { default: size, ribbon: ribbonWidth(size.height, size.width) },
             },
           },
