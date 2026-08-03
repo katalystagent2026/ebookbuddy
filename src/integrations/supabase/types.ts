@@ -242,34 +242,40 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          jitsi_room_name: string
           meeting_id: string
           name: string
           passcode: string
           sdk_key: string
           sdk_secret: string
           updated_at: string
+          video_provider: string
         }
         Insert: {
           created_at?: string
           id?: string
           is_active?: boolean
+          jitsi_room_name?: string
           meeting_id?: string
           name: string
           passcode?: string
           sdk_key?: string
           sdk_secret?: string
           updated_at?: string
+          video_provider?: string
         }
         Update: {
           created_at?: string
           id?: string
           is_active?: boolean
+          jitsi_room_name?: string
           meeting_id?: string
           name?: string
           passcode?: string
           sdk_key?: string
           sdk_secret?: string
           updated_at?: string
+          video_provider?: string
         }
         Relationships: []
       }

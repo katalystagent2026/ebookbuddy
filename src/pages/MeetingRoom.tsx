@@ -6,15 +6,19 @@ import { ArrowLeft, Video, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ZoomMeetingFrame from "@/components/ZoomMeetingFrame";
+import JitsiMeetingFrame from "@/components/JitsiMeetingFrame";
 
 const MeetingRoom = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [userName, setUserName] = useState("");
   const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
+  const [jitsiRoom, setJitsiRoom] = useState("");
   const [isChecking, setIsChecking] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
   const [meetingHeight, setMeetingHeight] = useState(() => Math.max(320, window.innerHeight - 72));
+
 
   useEffect(() => {
     let frame = 0;
@@ -54,13 +58,25 @@ const MeetingRoom = () => {
     (async () => {
       const { data: account } = await supabase
         .from("zoom_accounts")
-        .select("meeting_id")
+        .select("meeting_id, video_provider, jitsi_room_name")
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (cancelled) return;
+
+      const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
+      setProvider(activeProvider);
+
+      if (activeProvider === "jitsi") {
+        const room = ((account as any)?.jitsi_room_name || "").trim();
+        setJitsiRoom(room);
+        setMeetingId(room || null);
+        setIsChecking(false);
+        return;
+      }
+
       if (account?.meeting_id) {
         setMeetingId(account.meeting_id);
         setIsChecking(false);
@@ -83,6 +99,8 @@ const MeetingRoom = () => {
   }, [user]);
 
   const ready = Boolean(meetingId && userName);
+
+
 
   return (
     <div className="h-screen h-[100dvh] overflow-hidden flex flex-col bg-gradient-warm">
@@ -135,7 +153,11 @@ const MeetingRoom = () => {
           <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
 
             {ready ? (
-              <ZoomMeetingFrame userName={userName} />
+              provider === "jitsi" ? (
+                <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />
+              ) : (
+                <ZoomMeetingFrame userName={userName} />
+              )
             ) : (
               <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
             )}

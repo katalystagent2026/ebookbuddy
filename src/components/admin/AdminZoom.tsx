@@ -13,6 +13,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Video, Loader2, Plus, Pencil, Trash2, Terminal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +26,8 @@ interface ZoomAccount {
   passcode: string;
   is_active: boolean;
   created_at: string;
+  video_provider: 'zoom' | 'jitsi';
+  jitsi_room_name: string;
 }
 
 const emptyForm = {
@@ -30,7 +35,10 @@ const emptyForm = {
   meeting_id: '',
   passcode: '',
   is_active: true,
+  video_provider: 'zoom' as 'zoom' | 'jitsi',
+  jitsi_room_name: '',
 };
+
 
 export default function AdminZoom() {
   const [accounts, setAccounts] = useState<ZoomAccount[]>([]);
@@ -74,6 +82,8 @@ export default function AdminZoom() {
       meeting_id: account.meeting_id,
       passcode: account.passcode,
       is_active: account.is_active,
+      video_provider: account.video_provider === 'jitsi' ? 'jitsi' : 'zoom',
+      jitsi_room_name: account.jitsi_room_name || '',
     });
     setDialogOpen(true);
   };
@@ -90,7 +100,10 @@ export default function AdminZoom() {
       meeting_id: form.meeting_id.replace(/\s/g, ''),
       passcode: form.passcode.trim(),
       is_active: form.is_active,
+      video_provider: form.video_provider,
+      jitsi_room_name: form.jitsi_room_name.trim(),
     };
+
 
     const { error } = editingId
       ? await supabase.from('zoom_accounts').update(payload).eq('id', editingId)
@@ -240,27 +253,57 @@ export default function AdminZoom() {
                 placeholder="Reading Room Main"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="zoom-meeting">Meeting ID</Label>
-                <Input
-                  id="zoom-meeting"
-                  value={form.meeting_id}
-                  onChange={(e) => setForm({ ...form, meeting_id: e.target.value })}
-                  placeholder="123 456 7890"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="zoom-pass">Meeting Passcode</Label>
-                <Input
-                  id="zoom-pass"
-                  value={form.passcode}
-                  onChange={(e) => setForm({ ...form, passcode: e.target.value })}
-                  placeholder="Passcode"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="video-provider">Video Provider</Label>
+              <Select
+                value={form.video_provider}
+                onValueChange={(value) =>
+                  setForm({ ...form, video_provider: value as 'zoom' | 'jitsi' })
+                }
+              >
+                <SelectTrigger id="video-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zoom">Zoom</SelectItem>
+                  <SelectItem value="jitsi">Jitsi Meet</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {form.video_provider === 'jitsi' ? (
+              <div className="space-y-2">
+                <Label htmlFor="jitsi-room">Jitsi Room Name</Label>
+                <Input
+                  id="jitsi-room"
+                  value={form.jitsi_room_name}
+                  onChange={(e) => setForm({ ...form, jitsi_room_name: e.target.value })}
+                  placeholder="ebookbuddy-reading-room"
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="zoom-meeting">Meeting ID</Label>
+                  <Input
+                    id="zoom-meeting"
+                    value={form.meeting_id}
+                    onChange={(e) => setForm({ ...form, meeting_id: e.target.value })}
+                    placeholder="123 456 7890"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zoom-pass">Meeting Passcode</Label>
+                  <Input
+                    id="zoom-pass"
+                    value={form.passcode}
+                    onChange={(e) => setForm({ ...form, passcode: e.target.value })}
+                    placeholder="Passcode"
+                  />
+                </div>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
