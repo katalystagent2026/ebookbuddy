@@ -170,8 +170,8 @@ const MeetingRoom = () => {
                 (console.log("[MeetingRoom] rendering JitsiMeetingFrame (no zoom-signature call), room:", jitsiRoom),
                 <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />)
               ) : (
-                (console.log("[MeetingRoom] rendering ZoomMeetingFrame, frameHeight:", frameHeight),
-                <ZoomMeetingFrame userName={userName} availableHeight={frameHeight} />)
+                (console.log("[MeetingRoom] rendering ZoomMeetingFrame (Client View)"),
+                <ZoomMeetingFrame userName={userName} userEmail={user?.email} />)
               )
             ) : (
               <div className="flex-1 min-h-0 w-full rounded-lg bg-muted" />
