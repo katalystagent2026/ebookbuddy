@@ -72,13 +72,17 @@ const MeetingRoom = () => {
     (async () => {
       const { data: account } = await supabase
         .from("zoom_accounts")
-        .select("meeting_id, video_provider, jitsi_room_name")
+        .select("id, name, meeting_id, video_provider, jitsi_room_name")
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (cancelled) return;
+
+      if ((account as any)?.id) {
+        setSetup({ id: (account as any).id, name: (account as any).name || "" });
+      }
 
       const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
       console.log("[MeetingRoom] active setup video_provider:", (account as any)?.video_provider, "-> using:", activeProvider);
