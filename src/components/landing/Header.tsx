@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Book, Menu, X, Sparkles, LogOut, Shield } from 'lucide-react';
+import { Book, Menu, X, Sparkles, LogOut, Shield, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';

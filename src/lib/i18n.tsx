@@ -13,6 +13,7 @@ const translations = {
     administrator: 'Administrator',
     member: 'Member',
     adminDashboard: 'Admin Dashboard',
+    dashboard: 'Dashboard',
     signOut: 'Sign Out',
 
     // Hero
@@ -122,6 +123,7 @@ const translations = {
     administrator: 'Administrador',
     member: 'Miembro',
     adminDashboard: 'Panel de Admin',
+    dashboard: 'Panel',
     signOut: 'Cerrar Sesión',
 
     heroBadge: 'Donde la lectura se convierte en aventura',
@@ -225,6 +227,7 @@ const translations = {
     administrator: '관리자',
     member: '회원',
     adminDashboard: '관리자 대시보드',
+    dashboard: '대시보드',
     signOut: '로그아웃',
 
     heroBadge: '독서가 모험이 되는 곳',
