@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import AdminRegistrations from '@/components/admin/AdminRegistrations';
 import AdminStudents from '@/components/admin/AdminStudents';
 import AdminVolunteers from '@/components/admin/AdminVolunteers';
-import AdminStats from '@/components/admin/AdminStats';
+import AdminStatsTabs from '@/components/admin/AdminStatsTabs';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       case 'volunteers':
         return <AdminVolunteers />;
       case 'stats':
-        return <AdminStats />;
+        return <AdminStatsTabs />;
       case 'ebooks':
         return <AdminEbooks />;
       case 'zoom':

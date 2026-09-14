@@ -15,6 +15,8 @@ const MeetingRoom = () => {
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
   const [jitsiRoom, setJitsiRoom] = useState("");
+  const [setup, setSetup] = useState<{ id: string; name: string } | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
