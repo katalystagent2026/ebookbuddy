@@ -15,6 +15,8 @@ const MeetingRoom = () => {
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
   const [jitsiRoom, setJitsiRoom] = useState("");
+  const [setup, setSetup] = useState<{ id: string; name: string } | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -70,13 +72,17 @@ const MeetingRoom = () => {
     (async () => {
       const { data: account } = await supabase
         .from("zoom_accounts")
-        .select("meeting_id, video_provider, jitsi_room_name")
+        .select("id, name, meeting_id, video_provider, jitsi_room_name")
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (cancelled) return;
+
+      if ((account as any)?.id) {
+        setSetup({ id: (account as any).id, name: (account as any).name || "" });
+      }
 
       const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
       console.log("[MeetingRoom] active setup video_provider:", (account as any)?.video_provider, "-> using:", activeProvider);
@@ -112,6 +118,90 @@ const MeetingRoom = () => {
   }, [user]);
 
   const ready = Boolean(meetingId && userName);
+
+  // Track this user's session (entry, exit, duration, errors)
+  useEffect(() => {
+    if (!ready || !user || !setup) return;
+
+    let closed = false;
+    const errors: string[] = [];
+    const enteredAt = new Date();
+
+    const onError = (e: ErrorEvent) => {
+      if (errors.length < 5) errors.push(e.message);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      if (errors.length < 5) errors.push(String((e.reason as any)?.message ?? e.reason));
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+
+    const closeSession = () => {
+      const id = sessionIdRef.current;
+      if (closed || !id) return;
+      closed = true;
+      const exitedAt = new Date();
+      const minutes = Math.max(0, Math.round((exitedAt.getTime() - enteredAt.getTime()) / 60000));
+      supabase
+        .from("meeting_sessions")
+        .update({
+          exited_at: exitedAt.toISOString(),
+          duration_minutes: minutes,
+          error_log: errors.length ? errors.join(" | ").slice(0, 1000) : null,
+        })
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) console.error("[MeetingRoom] failed to close session record", error);
+        });
+    };
+
+    (async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const list = (roles || []).map((r: any) => r.role as string);
+      const role =
+        ["admin", "staff", "volunteer", "student"].find((r) => list.includes(r)) || list[0] || "user";
+
+      const { data, error } = await supabase
+        .from("meeting_sessions")
+        .insert({
+          zoom_account_id: setup.id,
+          session_name: setup.name,
+          video_provider: provider,
+          user_id: user.id,
+          user_name: userName,
+          user_email: user.email || "",
+          user_role: role,
+          entered_at: enteredAt.toISOString(),
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (error) {
+        console.error("[MeetingRoom] failed to create session record", error);
+        return;
+      }
+      if (closed) {
+        // component unmounted before the insert finished — close immediately
+        sessionIdRef.current = data?.id ?? null;
+        closed = false;
+        closeSession();
+        return;
+      }
+      sessionIdRef.current = data?.id ?? null;
+    })();
+
+    window.addEventListener("pagehide", closeSession);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      window.removeEventListener("pagehide", closeSession);
+      closeSession();
+      sessionIdRef.current = null;
+    };
+  }, [ready, user, setup, provider, userName]);
 
 
 

@@ -121,6 +121,65 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          entered_at: string
+          error_log: string | null
+          exited_at: string | null
+          id: string
+          session_name: string
+          updated_at: string
+          user_email: string
+          user_id: string | null
+          user_name: string
+          user_role: string
+          video_provider: string
+          zoom_account_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          entered_at?: string
+          error_log?: string | null
+          exited_at?: string | null
+          id?: string
+          session_name?: string
+          updated_at?: string
+          user_email?: string
+          user_id?: string | null
+          user_name?: string
+          user_role?: string
+          video_provider?: string
+          zoom_account_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          entered_at?: string
+          error_log?: string | null
+          exited_at?: string | null
+          id?: string
+          session_name?: string
+          updated_at?: string
+          user_email?: string
+          user_id?: string | null
+          user_name?: string
+          user_role?: string
+          video_provider?: string
+          zoom_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_sessions_zoom_account_id_fkey"
+            columns: ["zoom_account_id"]
+            isOneToOne: false
+            referencedRelation: "zoom_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
