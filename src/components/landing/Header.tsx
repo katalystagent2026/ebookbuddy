@@ -150,15 +150,13 @@ export function Header() {
               <div className="flex gap-3 pt-3 border-t border-border">
                 {user ? (
                   <>
-                    {isAdmin && (
-                      <Link to="/admin" className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Shield className="mr-2 h-4 w-4" />
-                          {t.adminDashboard}
-                        </Button>
-                      </Link>
-                    )}
-                    <Button variant="ghost" size="sm" className="flex-1" onClick={handleSignOut}>
+                    <Link to={isAdmin ? '/admin' : '/dashboard'} className="flex-1">
+                      <Button variant="hero" size="sm" className="w-full">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        {isAdmin ? t.adminDashboard : t.dashboard}
+                      </Button>
+                    </Link>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       {t.signOut}
                     </Button>
@@ -166,7 +164,7 @@ export function Header() {
                 ) : (
                   <>
                     <Link to="/login" className="flex-1">
-                      <Button variant="ghost" size="sm" className="w-full">
+                      <Button variant="outline" size="sm" className="w-full">
                         {t.signIn}
                       </Button>
                     </Link>
