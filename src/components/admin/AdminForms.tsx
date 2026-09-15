@@ -400,7 +400,7 @@ export default function AdminForms() {
                   value={form.ai_prompt}
                   rows={5}
                   onChange={(e) => setForm({ ...form, ai_prompt: e.target.value })}
-                  placeholder="e.g. Ask for full name, email, phone, availability (weekday/weekend) and a background check acknowledgement."
+                  placeholder="e.g. Start with a welcome heading and a short intro paragraph, then ask for full name, email, phone, and availability (weekday/weekend) under a section called 'Your availability'."
                 />
                 <Button
                   type="button"

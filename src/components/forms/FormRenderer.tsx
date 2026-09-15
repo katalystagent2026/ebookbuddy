@@ -10,7 +10,8 @@ import {
 import { Loader2 } from 'lucide-react';
 
 export type FormFieldType =
-  | 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox';
+  | 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox'
+  | 'heading' | 'paragraph';
 
 export interface FormFieldDef {
   name: string;
@@ -35,7 +36,8 @@ export function parseFields(value: unknown): FormFieldDef[] {
     .map((f, i) => ({
       name: String(f.name ?? `field_${i + 1}`),
       label: String(f.label ?? `Field ${i + 1}`),
-      type: (['text', 'email', 'tel', 'number', 'date', 'textarea', 'select', 'checkbox']
+      type: (['text', 'email', 'tel', 'number', 'date', 'textarea', 'select', 'checkbox',
+        'heading', 'paragraph']
         .includes(String(f.type)) ? String(f.type) : 'text') as FormFieldType,
       required: Boolean(f.required),
       placeholder: f.placeholder ? String(f.placeholder) : undefined,
@@ -85,6 +87,20 @@ export default function FormRenderer({ definition, preview, submitting, onSubmit
       <div className="space-y-4">
         {definition.fields.map((field) => {
           const id = `field-${field.name}`;
+          if (field.type === 'heading') {
+            return (
+              <h3 key={field.name} className="text-lg font-semibold pt-2">
+                {field.label}
+              </h3>
+            );
+          }
+          if (field.type === 'paragraph') {
+            return (
+              <p key={field.name} className="text-sm text-muted-foreground leading-relaxed">
+                {field.placeholder || field.label}
+              </p>
+            );
+          }
           if (field.type === 'checkbox') {
             return (
               <div key={field.name} className="flex items-start gap-3 rounded-lg border p-3">
