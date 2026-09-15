@@ -121,35 +121,88 @@ export type Database = {
         }
         Relationships: []
       }
+      form_submissions: {
+        Row: {
+          created_at: string
+          data: Json
+          form_id: string
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          form_id: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          form_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           ai_prompt: string | null
           created_at: string
           database_name: string | null
+          fields: Json
           id: string
+          is_published: boolean
           name: string
+          public_description: string | null
+          public_title: string | null
           public_url: string | null
           show_popup: boolean
+          slug: string | null
+          submit_label: string | null
           updated_at: string
         }
         Insert: {
           ai_prompt?: string | null
           created_at?: string
           database_name?: string | null
+          fields?: Json
           id?: string
+          is_published?: boolean
           name: string
+          public_description?: string | null
+          public_title?: string | null
           public_url?: string | null
           show_popup?: boolean
+          slug?: string | null
+          submit_label?: string | null
           updated_at?: string
         }
         Update: {
           ai_prompt?: string | null
           created_at?: string
           database_name?: string | null
+          fields?: Json
           id?: string
+          is_published?: boolean
           name?: string
+          public_description?: string | null
+          public_title?: string | null
           public_url?: string | null
           show_popup?: boolean
+          slug?: string | null
+          submit_label?: string | null
           updated_at?: string
         }
         Relationships: []
