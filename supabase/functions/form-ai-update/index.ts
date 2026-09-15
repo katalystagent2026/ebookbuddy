@@ -15,6 +15,8 @@ const FIELD_TYPES = [
   "textarea",
   "select",
   "checkbox",
+  "heading",
+  "paragraph",
 ];
 
 const SYSTEM_PROMPT = `You are a form builder. You output ONLY JSON describing a web form.
@@ -40,6 +42,12 @@ Rules:
 - Keep existing fields and their names unless the instruction asks to change or remove them.
 - Never invent extra keys. Never wrap the JSON in markdown fences or add commentary.
 - Use "checkbox" for single yes/no or acknowledgement fields.
+- Design blocks: "heading" renders its "label" as a section title; "paragraph" renders its
+  "placeholder" (fall back to "label") as a block of text. Both are display-only — visitors
+  cannot type into them — and both use required=false and options=null.
+- When the instruction asks for layout, structure, sections, welcome text, instructions or any
+  written copy, use "heading" and "paragraph" blocks to build it, interleaved with the questions.
+- Warm, plain, encouraging tone suited to a children's literacy charity.
 - Maximum 30 fields.`;
 
 Deno.serve(async (req) => {
