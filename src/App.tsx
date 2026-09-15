@@ -15,6 +15,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
+import PublicForm from "./pages/PublicForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,7 +73,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE PUBLIC FORM + CATCH-ALL ROUTES */}
+            <Route path="/:slug" element={<PublicForm />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
