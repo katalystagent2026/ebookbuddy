@@ -105,21 +105,64 @@ Deno.serve(async (req) => {
       });
     }
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const formSchema = {
+      type: "object",
+      additionalProperties: false,
+      required: ["title", "description", "submitLabel", "fields"],
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        submitLabel: { type: "string" },
+        fields: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["name", "label", "type", "required", "placeholder", "options"],
+            properties: {
+              name: { type: "string" },
+              label: { type: "string" },
+              type: { type: "string", enum: FIELD_TYPES },
+              required: { type: "boolean" },
+              placeholder: { type: ["string", "null"] },
+              options: { type: ["array", "null"], items: { type: "string" } },
+            },
+          },
+        },
+      },
+    };
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "fetch",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+        model: "openai/gpt-6-astra",
+        stream: true,
+        reasoning: { effort: "low" },
+        instructions: SYSTEM_PROMPT,
+        input: [
           {
             role: "user",
-            content: `Current form:\n${JSON.stringify(current, null, 2)}\n\nInstruction:\n${instruction}\n\nReturn the complete updated form JSON.`,
+            content: [
+              {
+                type: "input_text",
+                text: `Current form:\n${JSON.stringify(current, null, 2)}\n\nInstruction:\n${instruction}\n\nReturn the complete updated form JSON.`,
+              },
+            ],
           },
         ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "form_definition",
+            strict: true,
+            schema: formSchema,
+          },
+        },
       }),
     });
 
@@ -135,8 +178,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!aiRes.ok) {
-      const detail = await aiRes.text();
+    if (!aiRes.ok || !aiRes.body) {
+      const detail = await aiRes.text().catch(() => "");
       console.error("AI gateway error", aiRes.status, detail);
       return new Response(JSON.stringify({ error: "AI request failed" }), {
         status: 502,
@@ -144,8 +187,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    const aiJson = await aiRes.json();
-    const raw = aiJson?.choices?.[0]?.message?.content ?? "";
+    // Read the SSE stream and accumulate the output text.
+    let raw = "";
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(payload);
+          if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
+            raw += evt.delta;
+          } else if (evt?.type === "response.completed" && !raw) {
+            raw = String(evt?.response?.output_text ?? "");
+          } else if (evt?.type === "error" || evt?.type === "response.failed") {
+            console.error("AI stream error", payload);
+          }
+        } catch {
+          // ignore partial or non-JSON keepalive lines
+        }
+      }
+    }
+    if (!raw.trim()) {
+      return new Response(JSON.stringify({ error: "AI returned an empty form" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const cleaned = String(raw).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
 
     let parsed: Record<string, unknown>;
