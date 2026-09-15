@@ -121,6 +121,39 @@ export type Database = {
         }
         Relationships: []
       }
+      forms: {
+        Row: {
+          ai_prompt: string | null
+          created_at: string
+          database_name: string | null
+          id: string
+          name: string
+          public_url: string | null
+          show_popup: boolean
+          updated_at: string
+        }
+        Insert: {
+          ai_prompt?: string | null
+          created_at?: string
+          database_name?: string | null
+          id?: string
+          name: string
+          public_url?: string | null
+          show_popup?: boolean
+          updated_at?: string
+        }
+        Update: {
+          ai_prompt?: string | null
+          created_at?: string
+          database_name?: string | null
+          id?: string
+          name?: string
+          public_url?: string | null
+          show_popup?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_sessions: {
         Row: {
           created_at: string

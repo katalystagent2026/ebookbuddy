@@ -4,14 +4,19 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLogin from '@/components/admin/AdminLogin';
 import AdminApi from '@/components/admin/AdminApi';
+import AdminForms from '@/components/admin/AdminForms';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminSettings() {
+  const { isAdmin } = useAuth();
+
   return (
     <Tabs defaultValue="general" className="space-y-6">
       <TabsList>
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="login">Login</TabsTrigger>
         <TabsTrigger value="api">API</TabsTrigger>
+        {isAdmin && <TabsTrigger value="forms">Forms</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="login">
@@ -21,6 +26,13 @@ export default function AdminSettings() {
       <TabsContent value="api">
         <AdminApi />
       </TabsContent>
+
+      {isAdmin && (
+        <TabsContent value="forms">
+          <AdminForms />
+        </TabsContent>
+      )}
+
 
       <TabsContent value="general" className="space-y-6">
       <Card>
