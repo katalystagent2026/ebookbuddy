@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLogin from '@/components/admin/AdminLogin';
 import AdminApi from '@/components/admin/AdminApi';
 import AdminForms from '@/components/admin/AdminForms';
+import AdminLinks from '@/components/admin/AdminLinks';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminSettings() {
@@ -16,7 +17,7 @@ export default function AdminSettings() {
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="login">Login</TabsTrigger>
         <TabsTrigger value="api">API</TabsTrigger>
-        {isAdmin && <TabsTrigger value="forms">Forms</TabsTrigger>}
+        {isAdmin && <TabsTrigger value="forms">Forms/Link</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="login">
@@ -28,8 +29,9 @@ export default function AdminSettings() {
       </TabsContent>
 
       {isAdmin && (
-        <TabsContent value="forms">
+        <TabsContent value="forms" className="space-y-6">
           <AdminForms />
+          <AdminLinks />
         </TabsContent>
       )}
 
