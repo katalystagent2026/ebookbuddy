@@ -40,6 +40,19 @@ export default function PublicForm() {
           fields: parseFields(row.fields),
         });
       } else {
+        const { data: link } = await supabase
+          .from('links' as never)
+          .select('forward_email')
+          .ilike('slug', slug)
+          .eq('is_active', true)
+          .maybeSingle();
+        const target = (link as { forward_email?: string } | null)?.forward_email?.trim();
+        if (active && target) {
+          window.location.href = /^https?:\/\//i.test(target) || target.startsWith('mailto:')
+            ? target
+            : target.includes('@') ? `mailto:${target}` : `https://${target}`;
+          return;
+        }
         setFormId(null);
         setDefinition(null);
       }
