@@ -237,7 +237,7 @@ export default function AdminVolunteers() {
       verified: p.is_verified, date: p.created_at, profile: p,
     })),
     ...entries.map((e): Row => ({
-      key: `s-${e.id}`, kind: 'entry', name: pick(e.data, ['full_name', 'name', 'first_name']) || 'No name',
+      key: `s-${e.id}`, kind: 'entry', name: pick(e.data, ['full_name']) || [pick(e.data, ['first_name']), pick(e.data, ['last_name'])].filter(Boolean).join(' ') || pick(e.data, ['name']) || 'No name',
       email: pick(e.data, ['email']), phone: pick(e.data, ['phone']), source: e.formName,
       role: 'applicant', zoom: '—', verified: false, date: e.created_at, entry: e,
     })),
