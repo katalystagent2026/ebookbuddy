@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Loader2, Heart, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Search, Loader2, Heart, Plus, Pencil, Trash2, Check, X, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
@@ -32,6 +32,28 @@ interface ZoomAccount {
   id: string;
   name: string;
 }
+
+interface Entry {
+  id: string;
+  formName: string;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+interface Row {
+  key: string; kind: 'account' | 'entry'; name: string; email: string; phone: string;
+  source: string; role: string; zoom: string; verified: boolean; date: string;
+  profile?: Profile; entry?: Entry;
+}
+
+const pick = (data: Record<string, unknown>, keys: string[]) => {
+  for (const k of keys) {
+    const hit = Object.keys(data).find(d => d.toLowerCase() === k)
+      ?? Object.keys(data).find(d => d.toLowerCase().includes(k));
+    if (hit && data[hit]) return String(data[hit]);
+  }
+  return '';
+};
 
 const ROLES = ['volunteer', 'student', 'user', 'admin'] as const;
 
@@ -56,6 +78,11 @@ export default function AdminVolunteers() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [viewEntry, setViewEntry] = useState<Entry | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,6 +91,19 @@ export default function AdminVolunteers() {
 
   const fetchAll = async () => {
     setLoading(true);
+
+    const { data: formRows } = await supabase.from('forms').select('id, name').eq('add_to_volunteers' as never, true as never);
+    const formNames: Record<string, string> = {};
+    (formRows || []).forEach((f: { id: string; name: string }) => { formNames[f.id] = f.name; });
+    if (Object.keys(formNames).length) {
+      const { data: subs } = await supabase.from('form_submissions')
+        .select('id, form_id, data, created_at').in('form_id', Object.keys(formNames))
+        .order('created_at', { ascending: false });
+      setEntries((subs || []).map(x => ({
+        id: x.id, formName: formNames[x.form_id], created_at: x.created_at,
+        data: (x.data && typeof x.data === 'object' && !Array.isArray(x.data) ? x.data : {}) as Record<string, unknown>,
+      })));
+    } else setEntries([]);
 
     const [{ data: rolesData, error: rolesError }, { data: zoomData }] = await Promise.all([
       supabase.from('user_roles').select('user_id, role'),
@@ -190,68 +230,64 @@ export default function AdminVolunteers() {
   const zoomName = (id: string | null) =>
     zoomAccounts.find(z => z.id === id)?.name || '—';
 
-  const matches = (p: Profile) =>
-    p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+  const rows: Row[] = [
+    ...profiles.map((p): Row => ({
+      key: `p-${p.id}`, kind: 'account', name: p.full_name || 'No name', email: p.email, phone: '',
+      source: 'Account', role: roles[p.user_id] || 'volunteer', zoom: zoomName(p.zoom_account_id),
+      verified: p.is_verified, date: p.created_at, profile: p,
+    })),
+    ...entries.map((e): Row => ({
+      key: `s-${e.id}`, kind: 'entry', name: pick(e.data, ['full_name']) || [pick(e.data, ['first_name']), pick(e.data, ['last_name'])].filter(Boolean).join(' ') || pick(e.data, ['name']) || 'No name',
+      email: pick(e.data, ['email']), phone: pick(e.data, ['phone']), source: e.formName,
+      role: 'applicant', zoom: '—', verified: false, date: e.created_at, entry: e,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 
-  const verified = profiles.filter(p => p.is_verified && matches(p));
-  const pending = profiles.filter(p => !p.is_verified && matches(p));
-
-  const renderTable = (rows: Profile[], showActions: boolean) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Login Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Zoom Room</TableHead>
-          <TableHead>Verified</TableHead>
-          <TableHead>Joined</TableHead>
-          {showActions && <TableHead>Actions</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((p) => (
-          <TableRow key={p.id}>
-            <TableCell className="font-medium">{p.full_name || 'No name'}</TableCell>
-            <TableCell>{p.email}</TableCell>
-            <TableCell><Badge>{roles[p.user_id] || 'volunteer'}</Badge></TableCell>
-            <TableCell>{zoomName(p.zoom_account_id)}</TableCell>
-            <TableCell>
-              <Button
-                variant={p.is_verified ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => toggleVerified(p)}
-              >
-                {p.is_verified ? <Check className="w-4 h-4 mr-1" /> : <X className="w-4 h-4 mr-1" />}
-                {p.is_verified ? 'Yes' : 'No'}
-              </Button>
-            </TableCell>
-            <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
-            {showActions && (
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(p)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
-            )}
-          </TableRow>
-        ))}
-        {rows.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={showActions ? 7 : 6} className="text-center text-muted-foreground py-8">
-              No volunteers found
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+  const q = searchQuery.toLowerCase();
+  const filtered = rows.filter(r =>
+    (sourceFilter === 'all' || r.source === sourceFilter) &&
+    (statusFilter === 'all' || (statusFilter === 'verified' ? r.verified : !r.verified)) &&
+    (!q || [r.name, r.email, r.phone, r.source, r.entry ? JSON.stringify(r.entry.data) : '']
+      .some(v => v.toLowerCase().includes(q))),
   );
+  const sources = Array.from(new Set(rows.map(r => r.source)));
+  const allChecked = filtered.length > 0 && filtered.every(r => checked.has(r.key));
+  const toggleCheck = (key: string) => setChecked(prev => {
+    const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n;
+  });
+  const toggleAll = () => setChecked(prev => {
+    const n = new Set(prev);
+    filtered.forEach(r => (allChecked ? n.delete(r.key) : n.add(r.key)));
+    return n;
+  });
+
+  const downloadCsv = () => {
+    const picked = filtered.filter(r => checked.has(r.key));
+    const list = picked.length ? picked : filtered;
+    const extra = Array.from(new Set(list.flatMap(r => (r.entry ? Object.keys(r.entry.data) : []))));
+    const head = ['Name', 'Email', 'Phone', 'Submitted on', 'Role', 'Zoom Room', 'Verified', 'Date', ...extra];
+    const esc = (v: unknown) => {
+      const t = Array.isArray(v) ? v.join('; ') : v == null ? '' : String(v);
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const lines = [head, ...list.map(r => [
+      r.name, r.email, r.phone, r.source, r.role, r.zoom, r.verified ? 'Yes' : 'No',
+      new Date(r.date).toLocaleString(), ...extra.map(k => r.entry?.data[k]),
+    ])].map(l => l.map(esc).join(','));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `volunteers-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const deleteEntry = async (e: Entry) => {
+    if (!confirm('Delete this form entry?')) return;
+    const { error } = await supabase.from('form_submissions').delete().eq('id', e.id);
+    if (error) toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Entry deleted' }); fetchAll(); }
+  };
 
   if (loading) {
     return (
@@ -268,37 +304,119 @@ export default function AdminVolunteers() {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <CardTitle className="flex items-center gap-2">
               <Heart className="w-5 h-5" />
-              Volunteers ({profiles.length})
+              Volunteers ({rows.length})
             </CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search volunteers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={downloadCsv} disabled={filtered.length === 0}>
+                <Download className="w-4 h-4 mr-2" />
+                Download CSV{checked.size ? ` (${filtered.filter(r => checked.has(r.key)).length})` : ''}
+              </Button>
+              <Button onClick={openAdd}><Plus className="w-4 h-4 mr-2" />Add User</Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="verified">
-            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-              <TabsList>
-                <TabsTrigger value="verified">Verified ({verified.length})</TabsTrigger>
-                <TabsTrigger value="new">New ({pending.length})</TabsTrigger>
-              </TabsList>
-              <Button onClick={openAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
+          <div className="flex gap-2 flex-wrap pt-2">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search volunteers..." value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
             </div>
-
-            <TabsContent value="verified">{renderTable(verified, true)}</TabsContent>
-            <TabsContent value="new">{renderTable(pending, true)}</TabsContent>
-          </Tabs>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-56" aria-label="Filter by form"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                {sources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Select all" />
+                </TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Submitted on</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Zoom Room</TableHead>
+                <TableHead>Verified</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((r) => (
+                <TableRow key={r.key} data-state={checked.has(r.key) ? 'selected' : undefined}>
+                  <TableCell>
+                    <Checkbox checked={checked.has(r.key)} onCheckedChange={() => toggleCheck(r.key)} aria-label={`Select ${r.name}`} />
+                  </TableCell>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>{r.email || '—'}</TableCell>
+                  <TableCell><Badge variant={r.kind === 'entry' ? 'secondary' : 'outline'}>{r.source}</Badge></TableCell>
+                  <TableCell><Badge>{r.role}</Badge></TableCell>
+                  <TableCell>{r.zoom}</TableCell>
+                  <TableCell>
+                    {r.profile ? (
+                      <Button variant={r.verified ? 'default' : 'outline'} size="sm" onClick={() => toggleVerified(r.profile!)}>
+                        {r.verified ? <Check className="w-4 h-4 mr-1" /> : <X className="w-4 h-4 mr-1" />}
+                        {r.verified ? 'Yes' : 'No'}
+                      </Button>
+                    ) : <span className="text-sm text-muted-foreground">New</span>}
+                  </TableCell>
+                  <TableCell>{new Date(r.date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {r.profile ? (
+                        <>
+                          <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => openEdit(r.profile!)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => setDeleteTarget(r.profile!)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" aria-label="View" onClick={() => setViewEntry(r.entry!)}><Eye className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => deleteEntry(r.entry!)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No volunteers found</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!viewEntry} onOpenChange={(o) => !o && setViewEntry(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{viewEntry?.formName} entry</DialogTitle>
+            <DialogDescription>{viewEntry && new Date(viewEntry.created_at).toLocaleString()}</DialogDescription>
+          </DialogHeader>
+          <dl className="space-y-2 text-sm">
+            {viewEntry && Object.entries(viewEntry.data).map(([k, v]) => (
+              <div key={k} className="grid grid-cols-3 gap-2">
+                <dt className="font-medium capitalize">{k.replace(/_/g, ' ')}</dt>
+                <dd className="col-span-2 break-words">{Array.isArray(v) ? v.join(', ') : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v ?? '')}</dd>
+              </div>
+            ))}
+          </dl>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

@@ -158,6 +158,7 @@ export type Database = {
       }
       forms: {
         Row: {
+          add_to_volunteers: boolean
           ai_prompt: string | null
           created_at: string
           database_name: string | null
@@ -174,6 +175,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          add_to_volunteers?: boolean
           ai_prompt?: string | null
           created_at?: string
           database_name?: string | null
@@ -190,6 +192,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          add_to_volunteers?: boolean
           ai_prompt?: string | null
           created_at?: string
           database_name?: string | null
