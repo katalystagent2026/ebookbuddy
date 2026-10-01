@@ -28,6 +28,7 @@ interface FormRecord {
   database_name: string | null;
   show_popup: boolean;
   is_published: boolean;
+  add_to_volunteers?: boolean;
   public_title: string | null;
   public_description: string | null;
   submit_label: string | null;
@@ -42,6 +43,7 @@ interface FormState {
   database_name: string;
   show_popup: boolean;
   is_published: boolean;
+  add_to_volunteers: boolean;
   public_title: string;
   public_description: string;
   submit_label: string;
@@ -55,6 +57,7 @@ const emptyForm = (): FormState => ({
   database_name: 'form_submissions',
   show_popup: false,
   is_published: true,
+  add_to_volunteers: false,
   public_title: '',
   public_description: '',
   submit_label: 'Submit',
@@ -113,6 +116,7 @@ export default function AdminForms() {
       database_name: item.database_name ?? 'form_submissions',
       show_popup: item.show_popup,
       is_published: item.is_published ?? true,
+      add_to_volunteers: item.add_to_volunteers ?? false,
       public_title: item.public_title ?? item.name ?? '',
       public_description: item.public_description ?? '',
       submit_label: item.submit_label ?? 'Submit',
@@ -173,6 +177,7 @@ export default function AdminForms() {
       database_name: form.database_name.trim().slice(0, 120) || null,
       show_popup: form.show_popup,
       is_published: form.is_published,
+      add_to_volunteers: form.add_to_volunteers,
       public_title: form.public_title.trim() || name,
       public_description: form.public_description.trim() || null,
       submit_label: form.submit_label.trim() || 'Submit',
@@ -435,6 +440,20 @@ export default function AdminForms() {
                   id="form-popup"
                   checked={form.show_popup}
                   onCheckedChange={(checked) => setForm({ ...form, show_popup: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label htmlFor="form-volunteers">Add entries to Volunteers</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {form.add_to_volunteers ? 'New answers appear in Admin → Volunteers' : 'No'}
+                  </p>
+                </div>
+                <Switch
+                  id="form-volunteers"
+                  checked={form.add_to_volunteers}
+                  onCheckedChange={(checked) => setForm({ ...form, add_to_volunteers: checked })}
                 />
               </div>
 
