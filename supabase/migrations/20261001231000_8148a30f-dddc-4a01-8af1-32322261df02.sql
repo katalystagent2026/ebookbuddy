@@ -1,0 +1,1 @@
+ALTER TABLE public.forms ADD COLUMN add_to_volunteers boolean NOT NULL DEFAULT false;
