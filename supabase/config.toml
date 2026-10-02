@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.form-ai-update]
 verify_jwt = false
+
+[functions.get-word-data]
+verify_jwt = false

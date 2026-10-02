@@ -161,6 +161,26 @@ const Dashboard = () => {
                 </Button>
               </CardContent>
             </Card>
+            {/* Word Coach Card */}
+            <Card
+              className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-2 hover:border-primary/50"
+              onClick={() => navigate("/word-coach")}
+            >
+              <CardHeader className="text-center pb-2">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-8 w-8 text-primary" />
+                </div>
+                <CardTitle className="font-heading text-xl">Word Coach</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center">
+                  Save new words and learn what they mean
+                </CardDescription>
+                <Button variant="outline" className="w-full mt-4">
+                  Open Word Coach
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

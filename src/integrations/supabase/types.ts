@@ -415,6 +415,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_words: {
+        Row: {
+          box: number
+          created_at: string
+          id: string
+          next_review: string
+          user_id: string
+          word_id: string
+        }
+        Insert: {
+          box?: number
+          created_at?: string
+          id?: string
+          next_review?: string
+          user_id: string
+          word_id: string
+        }
+        Update: {
+          box?: number
+          created_at?: string
+          id?: string
+          next_review?: string
+          user_id?: string
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_words_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "words"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vocab_words: {
         Row: {
           created_at: string
@@ -440,6 +475,57 @@ export type Database = {
           example?: string
           id?: string
           reading_level?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
+      words: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          definition: string
+          example_sentence: string
+          id: string
+          ipa: string
+          needs_review: boolean
+          part_of_speech: string
+          sentence_audio_url: string | null
+          simple_definition: string
+          source: string
+          syllables: Json
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          definition?: string
+          example_sentence?: string
+          id?: string
+          ipa?: string
+          needs_review?: boolean
+          part_of_speech?: string
+          sentence_audio_url?: string | null
+          simple_definition?: string
+          source?: string
+          syllables?: Json
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          definition?: string
+          example_sentence?: string
+          id?: string
+          ipa?: string
+          needs_review?: boolean
+          part_of_speech?: string
+          sentence_audio_url?: string | null
+          simple_definition?: string
+          source?: string
+          syllables?: Json
           updated_at?: string
           word?: string
         }
