@@ -9,6 +9,7 @@ import {
   BookOpen, 
   Settings,
   Video,
+  WholeWord,
   LogOut,
   Menu,
   X,
@@ -21,8 +22,9 @@ import AdminStatsTabs from '@/components/admin/AdminStatsTabs';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
+import AdminVocab from '@/components/admin/AdminVocab';
 
-type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'zoom' | 'settings';
+type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'vocab' | 'zoom' | 'settings';
 
 const tabs = [
   { id: 'registrations' as TabId, label: 'Registrations', icon: ClipboardList },
@@ -30,6 +32,7 @@ const tabs = [
   { id: 'volunteers' as TabId, label: 'Volunteers', icon: Heart },
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
+  { id: 'vocab' as TabId, label: 'Vocab', icon: WholeWord },
   { id: 'zoom' as TabId, label: 'Zoom Setup', icon: Video },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
@@ -53,6 +56,8 @@ export default function AdminDashboard() {
         return <AdminStatsTabs />;
       case 'ebooks':
         return <AdminEbooks />;
+      case 'vocab':
+        return <AdminVocab />;
       case 'zoom':
         return <AdminZoom />;
 
