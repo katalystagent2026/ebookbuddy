@@ -138,43 +138,55 @@ Deno.serve(async (req) => {
     if (!cached) {
       // 2. Dictionary
       const dRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`, { headers: { "User-Agent": "WordCoach/1.0 (ebookbuddy.org)", Accept: "application/json" } });
-      if (!dRes.ok) {
+      let pos = "", definition = "", example = "", dictIpa = "", audio: string | null = null;
+      let source = "dictionaryapi.dev";
+      if (dRes.ok) {
+        const entries = await dRes.json();
+        const entry = entries?.[0] ?? {};
+        const meaning = entry.meanings?.[0] ?? {};
+        pos = meaning.partOfSpeech ?? "";
+        definition = meaning.definitions?.[0]?.definition ?? "";
+        for (const m of entry.meanings ?? []) for (const d of m.definitions ?? []) if (!example && d.example) example = d.example;
+        const phonetics: { text?: string; audio?: string }[] = entries.flatMap((e: any) => e.phonetics ?? []);
+        const us = phonetics.find((p) => p.text && p.audio?.includes("-us")) ?? phonetics.find((p) => p.text);
+        dictIpa = us?.text ?? entry.phonetic ?? "";
+        audio = phonetics.find((p) => p.audio?.includes("-us"))?.audio || phonetics.find((p) => p.audio)?.audio || null;
+      } else {
         console.log("dictionary status", dRes.status);
-        if (dRes.status !== 404) return json({ error: "The dictionary is busy right now. Please try again in a minute." }, 503);
         await dRes.body?.cancel();
-        return json({ error: `We couldn't find "${word}".`, notFound: true, suggestions: await suggestions(word) }, 404);
+        // Backup dictionary (Datamuse) when the main one is unreachable
+        if (dRes.status !== 404) {
+          const m = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&md=dp&max=1`).then((r) => r.ok ? r.json() : []).catch(() => []);
+          const hit = m?.[0];
+          if (hit?.word?.toLowerCase() === word && hit.defs?.length) {
+            const [p0, ...rest] = String(hit.defs[0]).split("\t");
+            const map: Record<string, string> = { n: "noun", v: "verb", adj: "adjective", adv: "adverb" };
+            pos = map[p0] ?? p0; definition = rest.join(" "); source = "datamuse";
+          }
+        }
+        if (!definition) {
+          return json({ error: `We couldn't find "${word}".`, notFound: true, suggestions: await suggestions(word) }, 404);
+        }
       }
-      const entries = await dRes.json();
-      const entry = entries?.[0] ?? {};
-      const meaning = entry.meanings?.[0] ?? {};
-      const definition = meaning.definitions?.[0]?.definition ?? "";
-      let example = "";
-      for (const m of entry.meanings ?? []) {
-        for (const d of m.definitions ?? []) if (!example && d.example) example = d.example;
-      }
-      const phonetics: { text?: string; audio?: string }[] = entries.flatMap((e: any) => e.phonetics ?? []);
-      const us = phonetics.find((p) => p.text && p.audio?.includes("-us")) ?? phonetics.find((p) => p.text);
-      const dictIpa = us?.text ?? entry.phonetic ?? "";
-      const audio = phonetics.find((p) => p.audio?.includes("-us"))?.audio || phonetics.find((p) => p.audio)?.audio || null;
 
       // 3. AI
       const apiKey = Deno.env.get("LOVABLE_API_KEY");
       if (!apiKey) return json({ error: "AI is not configured." }, 500);
-      const ai = await askAI(apiKey, { word, part_of_speech: meaning.partOfSpeech ?? "", definition, dictionary_example: example, dictionary_ipa: dictIpa });
+      const ai = await askAI(apiKey, { word, part_of_speech: pos, definition, dictionary_example: example, dictionary_ipa: dictIpa });
       if (ai.status === 429) return json({ error: "Lots of people are adding words. Please try again in a moment." }, 429);
       if (ai.status === 402) return json({ error: "AI credits are used up. Please tell your teacher." }, 402);
       if (!ai.data) return json({ error: "Something went wrong. Please try again." }, 502);
 
       const row = {
         word,
-        part_of_speech: meaning.partOfSpeech ?? "",
+        part_of_speech: pos,
         definition,
         simple_definition: String(ai.data.simple_definition ?? ""),
         ipa: dictIpa || String(ai.data.ipa ?? ""),
         syllables: Array.isArray(ai.data.syllables) ? ai.data.syllables : [],
         example_sentence: example || String(ai.data.example_sentence ?? ""),
         audio_url: audio,
-        source: "dictionaryapi.dev",
+        source,
         needs_review: !dictIpa,
       };
       const { data: ins, error } = await admin.from("words").insert(row).select().single();
