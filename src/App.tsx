@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
 import PublicForm from "./pages/PublicForm";
+import WordCoach from "./pages/WordCoach";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/word-coach"
+              element={
+                <ProtectedRoute>
+                  <WordCoach />
                 </ProtectedRoute>
               }
             />
