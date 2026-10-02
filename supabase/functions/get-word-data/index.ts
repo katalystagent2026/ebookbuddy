@@ -32,10 +32,8 @@ function lev(a: string, b: string) {
 
 async function suggestions(word: string): Promise<string[]> {
   try {
-    const r = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&max=0`);
     const r2 = await fetch(`https://api.datamuse.com/sug?s=${encodeURIComponent(word)}&max=8`);
     const list: { word: string }[] = r2.ok ? await r2.json() : [];
-    await r.body?.cancel();
     return list
       .map((x) => x.word)
       .filter((w) => /^[a-z' -]+$/i.test(w) && w.toLowerCase() !== word && lev(w.toLowerCase(), word) <= 3)
@@ -177,7 +175,7 @@ Deno.serve(async (req) => {
         source: "dictionaryapi.dev",
         needs_review: !dictIpa,
       };
-      const { data: ins, error } = await admin.from("words").upsert(row, { onConflict: "word" }).select().single();
+      const { data: ins, error } = await admin.from("words").insert(row).select().single();
       if (error) {
         const { data: again } = await admin.from("words").select("*").ilike("word", word).maybeSingle();
         if (!again) throw error;
