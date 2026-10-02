@@ -137,8 +137,10 @@ Deno.serve(async (req) => {
 
     if (!cached) {
       // 2. Dictionary
-      const dRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+      const dRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`, { headers: { "User-Agent": "WordCoach/1.0 (ebookbuddy.org)", Accept: "application/json" } });
       if (!dRes.ok) {
+        console.log("dictionary status", dRes.status);
+        if (dRes.status !== 404) return json({ error: "The dictionary is busy right now. Please try again in a minute." }, 503);
         await dRes.body?.cancel();
         return json({ error: `We couldn't find "${word}".`, notFound: true, suggestions: await suggestions(word) }, 404);
       }
