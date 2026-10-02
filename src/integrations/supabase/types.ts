@@ -415,6 +415,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vocab_words: {
+        Row: {
+          created_at: string
+          definition: string
+          example: string
+          id: string
+          reading_level: string
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          definition?: string
+          example?: string
+          id?: string
+          reading_level?: string
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          definition?: string
+          example?: string
+          id?: string
+          reading_level?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
       zoom_accounts: {
         Row: {
           created_at: string
