@@ -9,6 +9,7 @@ import {
   BookOpen, 
   Settings,
   Video,
+  WholeWord,
   LogOut,
   Menu,
   X,
