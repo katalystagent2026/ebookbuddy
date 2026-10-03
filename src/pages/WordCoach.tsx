@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, Trash2, Volume2, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, Plus, Search, Trash2, Volume2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,10 @@ const WordCoach = () => {
     [items, query],
   );
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const dueCount = items.filter((i) => i.next_review <= todayStr).length;
+
   const play = (url: string | null) => url && new Audio(url).play().catch(() => {});
 
   return (
@@ -92,6 +96,9 @@ const WordCoach = () => {
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-6 space-y-8">
+        <Button variant="hero" className="w-full h-16 text-xl rounded-2xl" onClick={() => navigate("/word-coach/practice")}>
+          <Play className="h-6 w-6" /> Practice{dueCount > 0 ? ` (${dueCount} due)` : ""}
+        </Button>
         <section aria-labelledby="add-heading" className="space-y-3">
           <h2 id="add-heading" className="font-heading text-xl font-semibold">Add a word</h2>
           <form onSubmit={(e) => { e.preventDefault(); addWord(); }} className="flex flex-col gap-3 sm:flex-row">

@@ -17,6 +17,7 @@ import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
 import PublicForm from "./pages/PublicForm";
 import WordCoach from "./pages/WordCoach";
+import WordPractice from "./pages/WordPractice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <WordCoach />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/word-coach/practice"
+              element={
+                <ProtectedRoute>
+                  <WordPractice />
                 </ProtectedRoute>
               }
             />
