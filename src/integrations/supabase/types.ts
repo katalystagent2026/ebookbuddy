@@ -79,6 +79,59 @@ export type Database = {
         }
         Relationships: []
       }
+      attempts: {
+        Row: {
+          created_at: string
+          id: string
+          score: number
+          user_id: string
+          weak_phonemes: Json
+          word_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          score?: number
+          user_id: string
+          weak_phonemes?: Json
+          word_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          score?: number
+          user_id?: string
+          weak_phonemes?: Json
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attempts_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "words"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      azure_viseme_to_mouth: {
+        Row: {
+          description: string
+          mouth: string
+          viseme_id: number
+        }
+        Insert: {
+          description?: string
+          mouth: string
+          viseme_id: number
+        }
+        Update: {
+          description?: string
+          mouth?: string
+          viseme_id?: number
+        }
+        Relationships: []
+      }
       ebooks: {
         Row: {
           author: string | null
@@ -206,6 +259,42 @@ export type Database = {
           show_popup?: boolean
           slug?: string | null
           submit_label?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ipa_sounds: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          examples: string[]
+          id: string
+          mouth_shape: string
+          name: string
+          symbol: string
+          tip: string
+          updated_at: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          examples?: string[]
+          id?: string
+          mouth_shape?: string
+          name?: string
+          symbol: string
+          tip?: string
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          examples?: string[]
+          id?: string
+          mouth_shape?: string
+          name?: string
+          symbol?: string
+          tip?: string
           updated_at?: string
         }
         Relationships: []
