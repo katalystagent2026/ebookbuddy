@@ -56,8 +56,9 @@ Deno.serve(async (req) => {
       return json({ error: "We didn't hear you. Hold the phone closer and try again." }, 422);
     }
     const w = best.Words?.[0];
-    const score = Math.round(best.PronunciationAssessment?.PronScore ?? best.PronunciationAssessment?.AccuracyScore ?? w?.PronunciationAssessment?.AccuracyScore ?? 0);
-    const phonemes = (w?.Phonemes ?? []).map((p: any) => ({ phoneme: p.Phoneme, score: Math.round(p.PronunciationAssessment?.AccuracyScore ?? 0) }));
+    const pa = best.PronunciationAssessment ?? best;
+    const score = Math.round(pa?.PronScore ?? pa?.AccuracyScore ?? w?.AccuracyScore ?? w?.PronunciationAssessment?.AccuracyScore ?? 0);
+    const phonemes = (w?.Phonemes ?? []).map((p: any) => ({ phoneme: p.Phoneme, score: Math.round(p.AccuracyScore ?? p.PronunciationAssessment?.AccuracyScore ?? 0) }));
     const weak = phonemes.filter((p: any) => p.score < 60);
 
     await uc.from("attempts").insert({ user_id: u.user.id, word_id: word.id, score, weak_phonemes: weak });
