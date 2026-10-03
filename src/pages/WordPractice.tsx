@@ -37,7 +37,7 @@ const Highlight = ({ sentence, word }: { sentence: string; word: string }) => {
   return (
     <>
       {sentence.split(re).map((part, i) =>
-        re.test(part) || part.toLowerCase().startsWith(word.toLowerCase())
+        i % 2 === 1
           ? <mark key={i} className="bg-accent/40 text-foreground rounded px-1 font-semibold">{part}</mark>
           : <span key={i}>{part}</span>,
       )}
