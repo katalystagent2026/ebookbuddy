@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.get-word-data]
 verify_jwt = false
+
+[functions.speak-word]
+verify_jwt = false
+
+[functions.assess-pronunciation]
+verify_jwt = false
