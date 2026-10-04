@@ -18,6 +18,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import PublicForm from "./pages/PublicForm";
 import WordCoach from "./pages/WordCoach";
 import WordPractice from "./pages/WordPractice";
+import WordTest from "./pages/WordTest";
+import WordProgress from "./pages/WordProgress";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -88,6 +90,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <WordPractice />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/word-coach/test"
+              element={
+                <ProtectedRoute>
+                  <WordTest />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/word-coach/progress"
+              element={
+                <ProtectedRoute>
+                  <WordProgress />
                 </ProtectedRoute>
               }
             />

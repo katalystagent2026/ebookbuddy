@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Volume2, Mic, ThumbsDown, Meh, ThumbsUp, Loader2, Square, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,8 @@ const Highlight = ({ sentence, word }: { sentence: string; word: string }) => {
 
 const WordPractice = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const onlyIds = params.get("ids")?.split(",").filter(Boolean) ?? [];
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
@@ -67,7 +69,9 @@ const WordPractice = () => {
   useEffect(() => {
     (async () => {
       const [{ data: due }, { data: s }, { data: v }] = await Promise.all([
-        supabase.from("user_words").select("id, box, next_review, words(*)").lte("next_review", localDate()).order("next_review"),
+        (onlyIds.length
+          ? supabase.from("user_words").select("id, box, next_review, words(*)").in("id", onlyIds)
+          : supabase.from("user_words").select("id, box, next_review, words(*)").lte("next_review", localDate()).order("next_review")),
         supabase.from("ipa_sounds").select("symbol, name, mouth_shape, examples, tip, audio_url"),
         supabase.from("azure_viseme_to_mouth").select("viseme_id, mouth"),
       ]);
