@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Plus, Search, Trash2, Volume2, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,14 @@ const WordCoach = () => {
         <Button variant="hero" className="w-full h-16 text-xl rounded-2xl" onClick={() => navigate("/word-coach/practice")}>
           <Play className="h-6 w-6" /> Practice{dueCount > 0 ? ` (${dueCount} due)` : ""}
         </Button>
+        <div className="grid grid-cols-2 gap-3 -mt-4">
+          <Button variant="outline" className="h-14 text-lg rounded-2xl border-2" onClick={() => navigate("/word-coach/test")}>
+            <ClipboardCheck className="h-5 w-5" /> Test
+          </Button>
+          <Button variant="outline" className="h-14 text-lg rounded-2xl border-2" onClick={() => navigate("/word-coach/progress")}>
+            <BarChart3 className="h-5 w-5" /> Progress
+          </Button>
+        </div>
         <section aria-labelledby="add-heading" className="space-y-3">
           <h2 id="add-heading" className="font-heading text-xl font-semibold">Add a word</h2>
           <form onSubmit={(e) => { e.preventDefault(); addWord(); }} className="flex flex-col gap-3 sm:flex-row">
