@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2, Pencil, Upload, Wand2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { resolveWordMedia, uploadWordMedia, removeWordMedia, generateWordAudio } from "@/lib/wordMedia";
 
 type Word = {
   id: string; word: string; part_of_speech: string; definition: string; simple_definition: string;
@@ -32,8 +33,9 @@ const formatDate = (d: string) => {
 };
 
 type EditDraft = {
-  id: string; word: string; part_of_speech: string; definition: string;
+  id: string; word: string; word_code: string; part_of_speech: string; definition: string;
   simple_definition: string; ipa: string; example_sentence: string;
+  image_url: string | null; audio_url: string | null; origIpa: string;
 };
 
 const WordCoach = () => {
@@ -49,30 +51,96 @@ const WordCoach = () => {
   const [toDelete, setToDelete] = useState<UserWord | null>(null);
   const [editing, setEditing] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState<"image" | "audio" | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [audioPreview, setAudioPreview] = useState<string | null>(null);
+
+  useEffect(() => { resolveWordMedia(editing?.image_url).then(setImagePreview); }, [editing?.image_url]);
+  useEffect(() => { resolveWordMedia(editing?.audio_url).then(setAudioPreview); }, [editing?.audio_url]);
 
   const openEdit = (w: Word & { definition?: string }) => {
+    const a = w as any;
     setEditing({
       id: w.id,
       word: w.word,
+      word_code: a.word_code ?? "",
       part_of_speech: w.part_of_speech ?? "",
-      definition: (w as any).definition ?? "",
+      definition: a.definition ?? "",
       simple_definition: w.simple_definition ?? "",
       ipa: w.ipa ?? "",
+      origIpa: w.ipa ?? "",
       example_sentence: w.example_sentence ?? "",
+      image_url: a.image_url ?? null,
+      audio_url: w.audio_url ?? null,
     });
+  };
+
+  const uploadMedia = async (kind: "image" | "audio", file?: File) => {
+    if (!editing || !file) return;
+    setMediaBusy(kind);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || (kind === "image" ? "png" : "mp3");
+      const path = await uploadWordMedia(editing.id, kind, file, ext);
+      const old = kind === "image" ? editing.image_url : editing.audio_url;
+      await supabase.from("words").update(kind === "image" ? { image_url: path } : { audio_url: path } as any).eq("id", editing.id);
+      await removeWordMedia(old);
+      setEditing((e) => e && { ...e, [kind === "image" ? "image_url" : "audio_url"]: path });
+      toast.success(kind === "image" ? "Image uploaded" : "Audio uploaded");
+      load();
+    } catch { toast.error("Upload failed"); }
+    setMediaBusy(null);
+  };
+
+  const deleteMedia = async (kind: "image" | "audio") => {
+    if (!editing) return;
+    setMediaBusy(kind);
+    const old = kind === "image" ? editing.image_url : editing.audio_url;
+    const { error } = await supabase.from("words").update(kind === "image" ? { image_url: null } : { audio_url: null } as any).eq("id", editing.id);
+    if (error) { toast.error("Could not delete"); setMediaBusy(null); return; }
+    await removeWordMedia(old);
+    setEditing((e) => e && { ...e, [kind === "image" ? "image_url" : "audio_url"]: null });
+    toast.success(kind === "image" ? "Image deleted" : "Audio deleted");
+    setMediaBusy(null);
+    load();
+  };
+
+  const regenerateAudio = async () => {
+    if (!editing?.ipa.trim()) { toast.error("Add the IPA first"); return; }
+    setMediaBusy("audio");
+    try {
+      const path = await generateWordAudio(editing.id, editing.word.trim(), editing.ipa.trim());
+      await supabase.from("words").update({ audio_url: path }).eq("id", editing.id);
+      await removeWordMedia(editing.audio_url);
+      setEditing((e) => e && { ...e, audio_url: path });
+      toast.success("Audio generated from IPA");
+      load();
+    } catch { toast.error("Could not generate audio"); }
+    setMediaBusy(null);
   };
 
   const saveEdit = async () => {
     if (!editing) return;
     setSaving(true);
+    const ipa = editing.ipa.trim();
+    let audio_url = editing.audio_url;
+    // Automatically create the pronunciation audio when missing or when the IPA changed.
+    if (ipa && (!audio_url || ipa !== editing.origIpa.trim())) {
+      try {
+        const path = await generateWordAudio(editing.id, editing.word.trim(), ipa);
+        await removeWordMedia(audio_url);
+        audio_url = path;
+      } catch { toast.error("Saved, but audio could not be generated"); }
+    }
     const { error } = await supabase.from("words").update({
       word: editing.word.trim(),
+      word_code: editing.word_code.trim() || null,
       part_of_speech: editing.part_of_speech.trim(),
       definition: editing.definition.trim(),
       simple_definition: editing.simple_definition.trim(),
-      ipa: editing.ipa.trim(),
+      ipa,
       example_sentence: editing.example_sentence.trim(),
-    }).eq("id", editing.id);
+      audio_url,
+    } as any).eq("id", editing.id);
     setSaving(false);
     if (error) { toast.error("Could not save changes"); return; }
     toast.success(`Saved "${editing.word}"`);
@@ -126,7 +194,7 @@ const WordCoach = () => {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const dueCount = items.filter((i) => i.next_review <= todayStr).length;
 
-  const play = (url: string | null) => url && new Audio(url).play().catch(() => {});
+  const play = async (url: string | null) => { const u = await resolveWordMedia(url); if (u) new Audio(u).play().catch(() => {}); };
 
   return (
     <div className="min-h-screen bg-background">
@@ -294,10 +362,65 @@ const WordCoach = () => {
           </DialogHeader>
           {editing && (
             <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="edit-word">Word</Label>
+                  <Input id="edit-word" value={editing.word}
+                    onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-code">Word ID#</Label>
+                  <Input id="edit-code" value={editing.word_code}
+                    onChange={(e) => setEditing({ ...editing, word_code: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-word">Word</Label>
-                <Input id="edit-word" value={editing.word}
-                  onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+                <Label>Image</Label>
+                {imagePreview ? (
+                  <img src={imagePreview} alt={editing.word} className="max-h-40 rounded-xl border border-border object-contain" />
+                ) : (
+                  <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
+                    <ImageIcon className="mr-2 h-5 w-5" /> No image
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="h-10 rounded-xl">
+                    <label className={mediaBusy ? "pointer-events-none opacity-50" : "cursor-pointer"}>
+                      {mediaBusy === "image" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {editing.image_url ? "Replace image" : "Upload image"}
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => { uploadMedia("image", e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  </Button>
+                  {editing.image_url && (
+                    <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={() => deleteMedia("image")}>
+                      <Trash2 className="h-4 w-4" /> Delete image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Audio</Label>
+                {audioPreview ? <audio controls src={audioPreview} className="w-full" /> :
+                  <p className="text-sm text-muted-foreground">No audio yet — it will be created from the IPA when you save.</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="h-10 rounded-xl">
+                    <label className={mediaBusy ? "pointer-events-none opacity-50" : "cursor-pointer"}>
+                      {mediaBusy === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {editing.audio_url ? "Replace audio" : "Upload audio"}
+                      <input type="file" accept="audio/*" className="hidden"
+                        onChange={(e) => { uploadMedia("audio", e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  </Button>
+                  <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={regenerateAudio}>
+                    <Wand2 className="h-4 w-4" /> Generate from IPA
+                  </Button>
+                  {editing.audio_url && (
+                    <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={() => deleteMedia("audio")}>
+                      <Trash2 className="h-4 w-4" /> Delete audio
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
