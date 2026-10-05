@@ -285,6 +285,57 @@ const WordCoach = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit word</DialogTitle>
+            <DialogDescription>Changes apply to this word for every learner who has it.</DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-word">Word</Label>
+                <Input id="edit-word" value={editing.word}
+                  onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-pos">Part of speech</Label>
+                  <Input id="edit-pos" value={editing.part_of_speech}
+                    onChange={(e) => setEditing({ ...editing, part_of_speech: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-ipa">IPA</Label>
+                  <Input id="edit-ipa" value={editing.ipa}
+                    onChange={(e) => setEditing({ ...editing, ipa: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-simple">Simple definition</Label>
+                <Textarea id="edit-simple" value={editing.simple_definition}
+                  onChange={(e) => setEditing({ ...editing, simple_definition: e.target.value })} className="rounded-xl" rows={2} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-def">Full definition</Label>
+                <Textarea id="edit-def" value={editing.definition}
+                  onChange={(e) => setEditing({ ...editing, definition: e.target.value })} className="rounded-xl" rows={3} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-example">Example sentence</Label>
+                <Textarea id="edit-example" value={editing.example_sentence}
+                  onChange={(e) => setEditing({ ...editing, example_sentence: e.target.value })} className="rounded-xl" rows={2} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="h-12 rounded-xl" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="hero" className="h-12 rounded-xl" disabled={saving || !editing?.word.trim()} onClick={saveEdit}>
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null} Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
