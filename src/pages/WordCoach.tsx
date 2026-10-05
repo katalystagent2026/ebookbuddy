@@ -32,8 +32,9 @@ const formatDate = (d: string) => {
 };
 
 type EditDraft = {
-  id: string; word: string; part_of_speech: string; definition: string;
+  id: string; word: string; word_code: string; part_of_speech: string; definition: string;
   simple_definition: string; ipa: string; example_sentence: string;
+  image_url: string | null; audio_url: string | null; origIpa: string;
 };
 
 const WordCoach = () => {
@@ -49,30 +50,96 @@ const WordCoach = () => {
   const [toDelete, setToDelete] = useState<UserWord | null>(null);
   const [editing, setEditing] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState<"image" | "audio" | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [audioPreview, setAudioPreview] = useState<string | null>(null);
+
+  useEffect(() => { resolveWordMedia(editing?.image_url).then(setImagePreview); }, [editing?.image_url]);
+  useEffect(() => { resolveWordMedia(editing?.audio_url).then(setAudioPreview); }, [editing?.audio_url]);
 
   const openEdit = (w: Word & { definition?: string }) => {
+    const a = w as any;
     setEditing({
       id: w.id,
       word: w.word,
+      word_code: a.word_code ?? "",
       part_of_speech: w.part_of_speech ?? "",
-      definition: (w as any).definition ?? "",
+      definition: a.definition ?? "",
       simple_definition: w.simple_definition ?? "",
       ipa: w.ipa ?? "",
+      origIpa: w.ipa ?? "",
       example_sentence: w.example_sentence ?? "",
+      image_url: a.image_url ?? null,
+      audio_url: w.audio_url ?? null,
     });
+  };
+
+  const uploadMedia = async (kind: "image" | "audio", file?: File) => {
+    if (!editing || !file) return;
+    setMediaBusy(kind);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || (kind === "image" ? "png" : "mp3");
+      const path = await uploadWordMedia(editing.id, kind, file, ext);
+      const old = kind === "image" ? editing.image_url : editing.audio_url;
+      await supabase.from("words").update(kind === "image" ? { image_url: path } : { audio_url: path } as any).eq("id", editing.id);
+      await removeWordMedia(old);
+      setEditing((e) => e && { ...e, [kind === "image" ? "image_url" : "audio_url"]: path });
+      toast.success(kind === "image" ? "Image uploaded" : "Audio uploaded");
+      load();
+    } catch { toast.error("Upload failed"); }
+    setMediaBusy(null);
+  };
+
+  const deleteMedia = async (kind: "image" | "audio") => {
+    if (!editing) return;
+    setMediaBusy(kind);
+    const old = kind === "image" ? editing.image_url : editing.audio_url;
+    const { error } = await supabase.from("words").update(kind === "image" ? { image_url: null } : { audio_url: null } as any).eq("id", editing.id);
+    if (error) { toast.error("Could not delete"); setMediaBusy(null); return; }
+    await removeWordMedia(old);
+    setEditing((e) => e && { ...e, [kind === "image" ? "image_url" : "audio_url"]: null });
+    toast.success(kind === "image" ? "Image deleted" : "Audio deleted");
+    setMediaBusy(null);
+    load();
+  };
+
+  const regenerateAudio = async () => {
+    if (!editing?.ipa.trim()) { toast.error("Add the IPA first"); return; }
+    setMediaBusy("audio");
+    try {
+      const path = await generateWordAudio(editing.id, editing.word.trim(), editing.ipa.trim());
+      await supabase.from("words").update({ audio_url: path }).eq("id", editing.id);
+      await removeWordMedia(editing.audio_url);
+      setEditing((e) => e && { ...e, audio_url: path });
+      toast.success("Audio generated from IPA");
+      load();
+    } catch { toast.error("Could not generate audio"); }
+    setMediaBusy(null);
   };
 
   const saveEdit = async () => {
     if (!editing) return;
     setSaving(true);
+    const ipa = editing.ipa.trim();
+    let audio_url = editing.audio_url;
+    // Automatically create the pronunciation audio when missing or when the IPA changed.
+    if (ipa && (!audio_url || ipa !== editing.origIpa.trim())) {
+      try {
+        const path = await generateWordAudio(editing.id, editing.word.trim(), ipa);
+        await removeWordMedia(audio_url);
+        audio_url = path;
+      } catch { toast.error("Saved, but audio could not be generated"); }
+    }
     const { error } = await supabase.from("words").update({
       word: editing.word.trim(),
+      word_code: editing.word_code.trim() || null,
       part_of_speech: editing.part_of_speech.trim(),
       definition: editing.definition.trim(),
       simple_definition: editing.simple_definition.trim(),
-      ipa: editing.ipa.trim(),
+      ipa,
       example_sentence: editing.example_sentence.trim(),
-    }).eq("id", editing.id);
+      audio_url,
+    } as any).eq("id", editing.id);
     setSaving(false);
     if (error) { toast.error("Could not save changes"); return; }
     toast.success(`Saved "${editing.word}"`);
