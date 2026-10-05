@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Word = {
-  id: string; word: string; part_of_speech: string; simple_definition: string;
+  id: string; word: string; part_of_speech: string; definition: string; simple_definition: string;
   ipa: string; example_sentence: string; audio_url: string | null;
   syllables: { text: string; stress: number }[];
 };
@@ -25,8 +31,14 @@ const formatDate = (d: string) => {
   return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
+type EditDraft = {
+  id: string; word: string; part_of_speech: string; definition: string;
+  simple_definition: string; ipa: string; example_sentence: string;
+};
+
 const WordCoach = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<{ message: string; suggestions: string[] } | null>(null);
@@ -35,6 +47,38 @@ const WordCoach = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [toDelete, setToDelete] = useState<UserWord | null>(null);
+  const [editing, setEditing] = useState<EditDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const openEdit = (w: Word & { definition?: string }) => {
+    setEditing({
+      id: w.id,
+      word: w.word,
+      part_of_speech: w.part_of_speech ?? "",
+      definition: (w as any).definition ?? "",
+      simple_definition: w.simple_definition ?? "",
+      ipa: w.ipa ?? "",
+      example_sentence: w.example_sentence ?? "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.from("words").update({
+      word: editing.word.trim(),
+      part_of_speech: editing.part_of_speech.trim(),
+      definition: editing.definition.trim(),
+      simple_definition: editing.simple_definition.trim(),
+      ipa: editing.ipa.trim(),
+      example_sentence: editing.example_sentence.trim(),
+    }).eq("id", editing.id);
+    setSaving(false);
+    if (error) { toast.error("Could not save changes"); return; }
+    toast.success(`Saved "${editing.word}"`);
+    setEditing(null);
+    load();
+  };
 
   const load = async () => {
     const { data, error } = await supabase
@@ -210,6 +254,12 @@ const WordCoach = () => {
                           <span className="text-sm text-muted-foreground">Review: {formatDate(item.next_review)}</span>
                         </div>
                       </div>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full"
+                          aria-label={`Edit ${item.words.word}`} onClick={() => openEdit(item.words)}>
+                          <Pencil className="h-5 w-5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full"
                         aria-label={`Delete ${item.words.word}`} onClick={() => setToDelete(item)}>
                         <Trash2 className="h-5 w-5" />
@@ -235,6 +285,57 @@ const WordCoach = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit word</DialogTitle>
+            <DialogDescription>Changes apply to this word for every learner who has it.</DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-word">Word</Label>
+                <Input id="edit-word" value={editing.word}
+                  onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-pos">Part of speech</Label>
+                  <Input id="edit-pos" value={editing.part_of_speech}
+                    onChange={(e) => setEditing({ ...editing, part_of_speech: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-ipa">IPA</Label>
+                  <Input id="edit-ipa" value={editing.ipa}
+                    onChange={(e) => setEditing({ ...editing, ipa: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-simple">Simple definition</Label>
+                <Textarea id="edit-simple" value={editing.simple_definition}
+                  onChange={(e) => setEditing({ ...editing, simple_definition: e.target.value })} className="rounded-xl" rows={2} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-def">Full definition</Label>
+                <Textarea id="edit-def" value={editing.definition}
+                  onChange={(e) => setEditing({ ...editing, definition: e.target.value })} className="rounded-xl" rows={3} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-example">Example sentence</Label>
+                <Textarea id="edit-example" value={editing.example_sentence}
+                  onChange={(e) => setEditing({ ...editing, example_sentence: e.target.value })} className="rounded-xl" rows={2} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="h-12 rounded-xl" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="hero" className="h-12 rounded-xl" disabled={saving || !editing?.word.trim()} onClick={saveEdit}>
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null} Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
