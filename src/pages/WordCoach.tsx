@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 
 type Word = {
-  id: string; word: string; part_of_speech: string; simple_definition: string;
+  id: string; word: string; part_of_speech: string; definition: string; simple_definition: string;
   ipa: string; example_sentence: string; audio_url: string | null;
   syllables: { text: string; stress: number }[];
 };
@@ -254,6 +254,12 @@ const WordCoach = () => {
                           <span className="text-sm text-muted-foreground">Review: {formatDate(item.next_review)}</span>
                         </div>
                       </div>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full"
+                          aria-label={`Edit ${item.words.word}`} onClick={() => openEdit(item.words)}>
+                          <Pencil className="h-5 w-5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full"
                         aria-label={`Delete ${item.words.word}`} onClick={() => setToDelete(item)}>
                         <Trash2 className="h-5 w-5" />
