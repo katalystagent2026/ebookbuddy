@@ -31,8 +31,14 @@ const formatDate = (d: string) => {
   return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
+type EditDraft = {
+  id: string; word: string; part_of_speech: string; definition: string;
+  simple_definition: string; ipa: string; example_sentence: string;
+};
+
 const WordCoach = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<{ message: string; suggestions: string[] } | null>(null);
@@ -41,6 +47,38 @@ const WordCoach = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [toDelete, setToDelete] = useState<UserWord | null>(null);
+  const [editing, setEditing] = useState<EditDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const openEdit = (w: Word & { definition?: string }) => {
+    setEditing({
+      id: w.id,
+      word: w.word,
+      part_of_speech: w.part_of_speech ?? "",
+      definition: (w as any).definition ?? "",
+      simple_definition: w.simple_definition ?? "",
+      ipa: w.ipa ?? "",
+      example_sentence: w.example_sentence ?? "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.from("words").update({
+      word: editing.word.trim(),
+      part_of_speech: editing.part_of_speech.trim(),
+      definition: editing.definition.trim(),
+      simple_definition: editing.simple_definition.trim(),
+      ipa: editing.ipa.trim(),
+      example_sentence: editing.example_sentence.trim(),
+    }).eq("id", editing.id);
+    setSaving(false);
+    if (error) { toast.error("Could not save changes"); return; }
+    toast.success(`Saved "${editing.word}"`);
+    setEditing(null);
+    load();
+  };
 
   const load = async () => {
     const { data, error } = await supabase
