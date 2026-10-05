@@ -576,6 +576,7 @@ export type Database = {
           definition: string
           example_sentence: string
           id: string
+          image_url: string | null
           ipa: string
           needs_review: boolean
           part_of_speech: string
@@ -585,6 +586,7 @@ export type Database = {
           syllables: Json
           updated_at: string
           word: string
+          word_code: string | null
         }
         Insert: {
           audio_url?: string | null
@@ -592,6 +594,7 @@ export type Database = {
           definition?: string
           example_sentence?: string
           id?: string
+          image_url?: string | null
           ipa?: string
           needs_review?: boolean
           part_of_speech?: string
@@ -601,6 +604,7 @@ export type Database = {
           syllables?: Json
           updated_at?: string
           word: string
+          word_code?: string | null
         }
         Update: {
           audio_url?: string | null
@@ -608,6 +612,7 @@ export type Database = {
           definition?: string
           example_sentence?: string
           id?: string
+          image_url?: string | null
           ipa?: string
           needs_review?: boolean
           part_of_speech?: string
@@ -617,6 +622,7 @@ export type Database = {
           syllables?: Json
           updated_at?: string
           word?: string
+          word_code?: string | null
         }
         Relationships: []
       }
