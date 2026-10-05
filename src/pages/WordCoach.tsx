@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, Play, ClipboardCheck, BarChart3, Plus, Search, Trash2, Volume2, Loader2, Pencil, Upload, Wand2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { resolveWordMedia, uploadWordMedia, removeWordMedia, generateWordAudio } from "@/lib/wordMedia";
 
 type Word = {
   id: string; word: string; part_of_speech: string; definition: string; simple_definition: string;
@@ -193,7 +194,7 @@ const WordCoach = () => {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const dueCount = items.filter((i) => i.next_review <= todayStr).length;
 
-  const play = (url: string | null) => url && new Audio(url).play().catch(() => {});
+  const play = async (url: string | null) => { const u = await resolveWordMedia(url); if (u) new Audio(u).play().catch(() => {}); };
 
   return (
     <div className="min-h-screen bg-background">
@@ -361,10 +362,65 @@ const WordCoach = () => {
           </DialogHeader>
           {editing && (
             <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="edit-word">Word</Label>
+                  <Input id="edit-word" value={editing.word}
+                    onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-code">Word ID#</Label>
+                  <Input id="edit-code" value={editing.word_code}
+                    onChange={(e) => setEditing({ ...editing, word_code: e.target.value })} className="h-12 rounded-xl" />
+                </div>
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-word">Word</Label>
-                <Input id="edit-word" value={editing.word}
-                  onChange={(e) => setEditing({ ...editing, word: e.target.value })} className="h-12 rounded-xl" />
+                <Label>Image</Label>
+                {imagePreview ? (
+                  <img src={imagePreview} alt={editing.word} className="max-h-40 rounded-xl border border-border object-contain" />
+                ) : (
+                  <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
+                    <ImageIcon className="mr-2 h-5 w-5" /> No image
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="h-10 rounded-xl">
+                    <label className={mediaBusy ? "pointer-events-none opacity-50" : "cursor-pointer"}>
+                      {mediaBusy === "image" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {editing.image_url ? "Replace image" : "Upload image"}
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => { uploadMedia("image", e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  </Button>
+                  {editing.image_url && (
+                    <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={() => deleteMedia("image")}>
+                      <Trash2 className="h-4 w-4" /> Delete image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Audio</Label>
+                {audioPreview ? <audio controls src={audioPreview} className="w-full" /> :
+                  <p className="text-sm text-muted-foreground">No audio yet — it will be created from the IPA when you save.</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="h-10 rounded-xl">
+                    <label className={mediaBusy ? "pointer-events-none opacity-50" : "cursor-pointer"}>
+                      {mediaBusy === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {editing.audio_url ? "Replace audio" : "Upload audio"}
+                      <input type="file" accept="audio/*" className="hidden"
+                        onChange={(e) => { uploadMedia("audio", e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  </Button>
+                  <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={regenerateAudio}>
+                    <Wand2 className="h-4 w-4" /> Generate from IPA
+                  </Button>
+                  {editing.audio_url && (
+                    <Button variant="outline" className="h-10 rounded-xl" disabled={!!mediaBusy} onClick={() => deleteMedia("audio")}>
+                      <Trash2 className="h-4 w-4" /> Delete audio
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
