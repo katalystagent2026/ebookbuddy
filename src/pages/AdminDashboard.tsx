@@ -22,7 +22,8 @@ import AdminStatsTabs from '@/components/admin/AdminStatsTabs';
 import AdminEbooks from '@/components/admin/AdminEbooks';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AdminZoom from '@/components/admin/AdminZoom';
-import AdminVocab from '@/components/admin/AdminVocab';
+import AdminVocab, { WORD_REVIEW_EVENT } from '@/components/admin/AdminVocab';
+import { supabase } from '@/integrations/supabase/client';
 
 type TabId = 'registrations' | 'students' | 'volunteers' | 'stats' | 'ebooks' | 'vocab' | 'zoom' | 'settings';
 
@@ -32,7 +33,7 @@ const tabs = [
   { id: 'volunteers' as TabId, label: 'Volunteers', icon: Heart },
   { id: 'stats' as TabId, label: 'Stats', icon: BarChart3 },
   { id: 'ebooks' as TabId, label: 'eBooks', icon: BookOpen },
-  { id: 'vocab' as TabId, label: 'Vocab', icon: WholeWord },
+  { id: 'vocab' as TabId, label: 'Word Coach', icon: WholeWord },
   { id: 'zoom' as TabId, label: 'Zoom Setup', icon: Video },
   { id: 'settings' as TabId, label: 'Settings', icon: Settings },
 ];
@@ -43,6 +44,17 @@ export default function AdminDashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { signOut } = useAuth();
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      const { count } = await supabase.from('words').select('id', { count: 'exact', head: true }).eq('needs_review', true);
+      setReviewCount(count ?? 0);
+    };
+    fetchCount();
+    window.addEventListener(WORD_REVIEW_EVENT, fetchCount);
+    return () => window.removeEventListener(WORD_REVIEW_EVENT, fetchCount);
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -107,7 +119,12 @@ export default function AdminDashboard() {
                 )}
               >
                 <tab.icon className="w-5 h-5" />
-                {tab.label}
+                <span className="flex-1 text-left">{tab.label}</span>
+                {tab.id === 'vocab' && reviewCount > 0 && (
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground" aria-label={`${reviewCount} words need review`}>
+                    {reviewCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
