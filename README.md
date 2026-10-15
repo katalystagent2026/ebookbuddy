@@ -1,73 +1,200 @@
-# Welcome to your Lovable project
+# EbookBuddy
 
-## Project info
+Mission Statement
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+I want to build a literacy and mentorship web platform that helps at-risk elementary school students improve reading skills by reading online books together with caring volunteers.
+It should feel safe, playful, excited, and educational, blending storybook magic with grounded, trustworthy learning—like a warm library where imagination and growth live side by side.
 
-## How can I edit this code?
+Project Name: eBookBuddy
 
-There are several ways of editing your application.
+Target Audience
 
-**Use Lovable**
+Elementary students (ages 6–10) who need reading support and emotional safety
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Volunteer mentors who want meaningful, structured ways to support literacy
 
-Changes made via Lovable will be committed automatically to this repo.
+Schools and nonprofits seeking safe, measurable reading programs
 
-**Use your preferred IDE**
+Core Emotional Strategy (Key Insight)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Magic draws kids in
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Structure earns adult trust
 
-Follow these steps:
+Kindness keeps everyone coming back
+
+This balance should be felt in every interaction.
+
+Core Features & Pages
+
+✅ Dual-Layer Onboarding
+
+Kids experience: friendly mascot, gentle animations, “Let’s read together!” language
+
+Volunteers experience: calm tone, clarity on impact, expectations, and safety
+
+Both feel welcomed—not evaluated
+
+✅ Reading Buddy Matching
+
+Matches based on reading level, schedule, and preferences
+
+Framed as “You’ve met your reading buddy” (magical)
+
+Supported by clear safeguards, reporting tools, and visibility (grounded)
+
+✅ Live Reading Room
+
+Shared book view with:
+
+Page-turn animations (storybook magic)
+
+Word highlighting, pause points, and prompts (educational grounding)
+
+Optional mentor nudges like:
+
+“Try asking what they think happens next”
+
+“Pause here if they need help”
+
+✅ Curated Book World
+
+Books grouped into themed “worlds” (Adventure, Friendship, Curiosity)
+
+Reading levels clearly but gently communicated
+
+Visual delight without overwhelming cognition
+
+✅ Progress Without Pressure
+
+Kids see progress as stars, badges, and “stories completed”
+
+Volunteers see literacy growth indicators and session reflections
+
+No grades. No red marks. Only encouragement and forward motion.
+
+Tech Stack
+
+Frontend: Vite + TypeScript + React + shadcn/ui + Tailwind CSS
+
+Backend & Storage: Lovable Cloud (recommended for secure data, scaling programs, and auditability)
+
+Auth: Guardian-managed child accounts, volunteer verification flows
+
+Design Guidelines
+
+(Interpreting emotion into form, guided by design-tips.md )
+
+Emotional Thesis
+Feels like a magical storybook that lives inside a real school library—imaginative, calm, and trustworthy.
+
+Typography
+
+Headings: Friendly rounded sans-serif (signals safety + play)
+
+Body: Highly legible educational sans-serif (signals learning + credibility)
+
+Clear hierarchy so magic never compromises readability
+
+≥ 1.5× line-height, AA+ contrast
+
+Color System
+
+Primary: Soft sky blue (#6EC1E4) → safety & calm
+
+Accent: Golden yellow (#FFD966) → curiosity & joy
+
+Secondary: Gentle forest green (#6FAF8E) → learning & growth
+
+Background: Warm off-white (#FAFAF7)
+
+Emotional logic: playful accents, serious foundations
+
+Layout & Spacing
+
+8pt grid system
+
+Consistent layouts (grounded) with soft curves and illustrations (magical)
+
+Whitespace slows the pace and reduces anxiety
+
+Motion & Interactions
+
+Motion used sparingly, as kindness
+
+Page turns feel tactile and story-like
+
+Celebrations are small and affirming—not distracting
+
+200–300ms, ease-in-out
+
+Voice & Microcopy
+
+Encouraging, warm, never childish or clinical
+
+Examples:
+
+“Your reading space is ready ✨”
+
+“Every page helps you grow.”
+
+“Thank you for showing up today.”
+
+System Consistency
+
+Same visual language across kid and volunteer views
+
+Magic never breaks rules; rules never kill delight
+
+Accessibility
+
+Keyboard-first navigation
+
+Screen-reader-friendly reading flows
+
+Clear focus states, simple language, no time pressure
+
+Design Integrity Review
+
+Does the magic invite learning—or distract from it?
+
+Does the structure protect trust without feeling cold?
+
+Does the product feel kind, safe, and human?
+
+Optional AI Feature
+
+A gentle reading guide AI:
+
+Feels like a calm librarian with a bit of magic
+
+Suggests prompts, explains tricky words, encourages curiosity
+
+Never corrects harshly; always reframes positively
+
+Final Reflection
+
+Read Together is not just a reading tool—it’s an emotional environment. By blending magical storytelling with grounded educational structure, the platform supports literacy, mentorship, and trust at the same time—making learning feel safe, joyful, and real.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://ebookbuddy.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/53a6c178-c0eb-4e99-a2ae-71cd38dd8c9d).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
