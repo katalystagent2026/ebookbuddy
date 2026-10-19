@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  DEFAULT_EMAILS, EMAIL_PURPOSES, NAME_FALLBACK, SITE_URL, fillFields, htmlToText, renderEmail,
+  type EmailLanguage, type EmailLayout, type EmailPurpose,
+} from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,134 +15,54 @@ const json = (b: unknown, s = 200) =>
 const FROM = "eBookBuddy <noreply@ebookbuddy.org>";
 const REPLY_TO = "info@ebookbuddy.org";
 const ADMIN_INBOX = "info@ebookbuddy.org";
-const SITE = "https://ebookbuddy.org";
-const LOGO = `${SITE}/email-logo.png`;
 // The public form may only trigger a confirmation for a registration this fresh.
 const CONFIRMATION_WINDOW_MINUTES = 15;
 
-type Lang = "en" | "es";
+type Lang = EmailLanguage;
+type Db = ReturnType<typeof createClient>;
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+/**
+ * Builds the email for a purpose: the admin's saved template (Settings → Emails) for
+ * that purpose and language if there is one, otherwise the built-in wording.
+ */
+const composeEmail = async (db: Db, purpose: EmailPurpose, lang: Lang, values: Record<string, string>) => {
+  const englishOnly = EMAIL_PURPOSES.find((p) => p.id === purpose)?.englishOnly;
+  const language: Lang = englishOnly ? "en" : lang;
+  const { data: saved } = await db
+    .from("email_templates")
+    .select("subject, body_html, layout")
+    .eq("purpose", purpose)
+    .eq("language", language)
+    .maybeSingle();
+  const fallback = DEFAULT_EMAILS[purpose][language] ?? DEFAULT_EMAILS[purpose].en;
+  const subject = saved?.subject?.trim() ? saved.subject : fallback.subject;
+  const bodyTemplate = saved?.body_html?.trim() ? saved.body_html : fallback.body;
+  const layout = (saved?.layout ?? "classic") as EmailLayout;
+  const filled = { site_link: SITE_URL, admin_link: `${SITE_URL}/admin`, ...values };
+  const body = fillFields(bodyTemplate, filled);
+  return {
+    subject: fillFields(subject, filled, true),
+    html: renderEmail(layout, body, language),
+    text: `${htmlToText(body)}
 
-/** Wraps paragraphs in a simple branded layout. Recipients' names are escaped by the caller. */
-const layout = (paragraphs: string[], footer: string) => `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#f7f5f0;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px">
-    <tr><td style="padding:28px 32px 8px"><img src="${LOGO}" width="56" height="56" alt="eBookBuddy" style="border-radius:12px"></td></tr>
-    <tr><td style="padding:8px 32px 24px;font-size:16px;line-height:1.6">
-      ${paragraphs.map((p) => `<p style="margin:0 0 16px">${p}</p>`).join("\n      ")}
-    </td></tr>
-    <tr><td style="padding:16px 32px 28px;border-top:1px solid #eee;font-size:13px;color:#6b7280">${footer}</td></tr>
-  </table>
-</body></html>`;
-
-const FOOTER: Record<Lang, string> = {
-  en: `eBookBuddy · <a href="${SITE}" style="color:#6b7280">ebookbuddy.org</a> · Questions? Just reply to this email.`,
-  es: `eBookBuddy · <a href="${SITE}" style="color:#6b7280">ebookbuddy.org</a> · ¿Preguntas? Responda a este correo.`,
+--
+eBookBuddy · ${SITE_URL}`,
+  };
 };
 
-const greeting = (lang: Lang, name: string | null) => {
-  const n = name?.trim() ? `, ${esc(name.trim())}` : "";
-  return lang === "es" ? `Hola${n}:` : `Hi${n},`;
-};
-
-const registrationReceived = (lang: Lang, guardianName: string | null) =>
-  lang === "es"
-    ? {
-        subject: "Recibimos su inscripción en eBookBuddy",
-        paragraphs: [
-          greeting(lang, guardianName),
-          "¡Gracias por inscribir a su hijo/a en eBookBuddy! Recibimos su solicitud.",
-          "Nuestro equipo la revisará y le enviaremos un correo cuando tengamos una respuesta.",
-        ],
-      }
-    : {
-        subject: "We received your eBookBuddy registration",
-        paragraphs: [
-          greeting(lang, guardianName),
-          "Thank you for registering your child with eBookBuddy! We've received your application.",
-          "Our team will review it and email you as soon as there's an update.",
-        ],
-      };
-
-const registrationDecision = (lang: Lang, guardianName: string | null, approved: boolean) => {
-  if (lang === "es") {
-    return approved
-      ? {
-          subject: "¡Su inscripción en eBookBuddy fue aprobada!",
-          paragraphs: [
-            greeting(lang, guardianName),
-            "¡Buenas noticias! La inscripción de su hijo/a en eBookBuddy fue aprobada.",
-            "Nos pondremos en contacto pronto con los próximos pasos para comenzar las sesiones de lectura.",
-          ],
-        }
-      : {
-          subject: "Actualización sobre su inscripción en eBookBuddy",
-          paragraphs: [
-            greeting(lang, guardianName),
-            "Gracias por su interés en eBookBuddy. En este momento no podemos aceptar la inscripción de su hijo/a.",
-            "Si tiene preguntas, responda a este correo y con gusto le ayudaremos.",
-          ],
-        };
-  }
-  return approved
-    ? {
-        subject: "Your eBookBuddy registration is approved!",
-        paragraphs: [
-          greeting(lang, guardianName),
-          "Good news! Your child's eBookBuddy registration has been approved.",
-          "We'll be in touch soon with the next steps for starting reading sessions.",
-        ],
-      }
-    : {
-        subject: "An update on your eBookBuddy registration",
-        paragraphs: [
-          greeting(lang, guardianName),
-          "Thank you for your interest in eBookBuddy. Unfortunately, we aren't able to accept your child's registration at this time.",
-          "If you have any questions, just reply to this email and we'll be glad to help.",
-        ],
-      };
-};
-
-const volunteerVerified = (name: string | null) => ({
-  subject: "You're verified as an eBookBuddy volunteer!",
-  paragraphs: [
-    greeting("en", name),
-    "Thank you for volunteering! Your eBookBuddy volunteer account is now verified.",
-    `To join a reading session, sign in at <a href="${SITE}">ebookbuddy.org</a>, open your dashboard, and click <strong>Online Meeting Room</strong>.`,
-    "If the button isn't available yet, an administrator still needs to assign you to a meeting room. We'll let you know.",
-  ],
-});
-
-const adminNewRegistration = () => ({
-  subject: "New student registration on eBookBuddy",
-  paragraphs: [
-    "A new student registration was just submitted.",
-    `Review it in <a href="${SITE}/admin">Admin → Registrations</a>.`,
-  ],
-});
-
-const toText = (paragraphs: string[]) => paragraphs.map((p) => p.replace(/<[^>]+>/g, "")).join("\n\n");
-
-const sendEmail = async (to: string, mail: { subject: string; paragraphs: string[] }, lang: Lang) => {
+const sendEmail = async (to: string, mail: { subject: string; html: string; text: string }) => {
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) throw new Error("RESEND_API_KEY is not set");
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: FROM,
-      to: [to],
-      reply_to: REPLY_TO,
-      subject: mail.subject,
-      html: layout(mail.paragraphs, FOOTER[lang]),
-      text: `${toText(mail.paragraphs)}\n\n--\neBookBuddy · ${SITE}`,
-    }),
+    body: JSON.stringify({ from: FROM, to: [to], reply_to: REPLY_TO, ...mail }),
   });
   // Log status only: never log recipients or names.
   if (!res.ok) throw new Error(`Resend responded ${res.status}`);
 };
+
+const nameOr = (name: string | null | undefined, lang: Lang) => name?.trim() || NAME_FALLBACK[lang];
 
 /** The registration form stores the language the guardian used in the notes JSON. */
 const languageOf = (notes: string | null): Lang => {
@@ -189,8 +113,10 @@ Deno.serve(async (req) => {
       if (!claimed) return json({ ok: true, sent: false });
 
       const lang = languageOf(reg.notes);
-      await sendEmail(email, registrationReceived(lang, reg.guardian_name), lang);
-      await sendEmail(ADMIN_INBOX, adminNewRegistration(), "en").catch((e) => console.error("send-email admin notice", String(e)));
+      await sendEmail(email, await composeEmail(admin, "registration_received", lang, { guardian_name: nameOr(reg.guardian_name, lang) }));
+      await composeEmail(admin, "admin_new_registration", "en", {})
+        .then((mail) => sendEmail(ADMIN_INBOX, mail))
+        .catch((e) => console.error("send-email admin notice", String(e)));
       return json({ ok: true, sent: true });
     }
 
@@ -211,7 +137,8 @@ Deno.serve(async (req) => {
       if (!reg || !isEmail(reg.guardian_email)) return json({ ok: true, sent: false });
       if (reg.status !== "approved" && reg.status !== "rejected") return json({ ok: true, sent: false });
       const lang = languageOf(reg.notes);
-      await sendEmail(reg.guardian_email, registrationDecision(lang, reg.guardian_name, reg.status === "approved"), lang);
+      const purpose = reg.status === "approved" ? "registration_approved" : "registration_rejected";
+      await sendEmail(reg.guardian_email, await composeEmail(admin, purpose, lang, { guardian_name: nameOr(reg.guardian_name, lang) }));
       return json({ ok: true, sent: true });
     }
 
@@ -222,7 +149,7 @@ Deno.serve(async (req) => {
         .eq("user_id", String(body?.user_id ?? ""))
         .maybeSingle();
       if (!profile?.is_verified || !isEmail(profile.email)) return json({ ok: true, sent: false });
-      await sendEmail(profile.email, volunteerVerified(profile.full_name), "en");
+      await sendEmail(profile.email, await composeEmail(admin, "volunteer_verified", "en", { volunteer_name: nameOr(profile.full_name, "en") }));
       return json({ ok: true, sent: true });
     }
 

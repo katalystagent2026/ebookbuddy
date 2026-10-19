@@ -174,6 +174,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          id: string
+          language: string
+          layout: string
+          name: string
+          purpose: string | null
+          subject: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_html?: string
+          created_at?: string
+          id?: string
+          language?: string
+          layout?: string
+          name: string
+          purpose?: string | null
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          id?: string
+          language?: string
+          layout?: string
+          name?: string
+          purpose?: string | null
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       form_submissions: {
         Row: {
           created_at: string
@@ -437,6 +476,7 @@ export type Database = {
       }
       registrations: {
         Row: {
+          confirmation_emailed_at: string | null
           created_at: string
           grade_level: string | null
           guardian_email: string | null

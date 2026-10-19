@@ -6,6 +6,7 @@ import AdminLogin from '@/components/admin/AdminLogin';
 import AdminApi from '@/components/admin/AdminApi';
 import AdminForms from '@/components/admin/AdminForms';
 import AdminLinks from '@/components/admin/AdminLinks';
+import AdminEmails from '@/components/admin/emails/AdminEmails';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminSettings() {
@@ -18,6 +19,7 @@ export default function AdminSettings() {
         <TabsTrigger value="login">Login</TabsTrigger>
         <TabsTrigger value="api">API</TabsTrigger>
         {isAdmin && <TabsTrigger value="forms">Forms/Link</TabsTrigger>}
+        {isAdmin && <TabsTrigger value="emails">Emails</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="login">
@@ -32,6 +34,12 @@ export default function AdminSettings() {
         <TabsContent value="forms" className="space-y-6">
           <AdminForms />
           <AdminLinks />
+        </TabsContent>
+      )}
+
+      {isAdmin && (
+        <TabsContent value="emails">
+          <AdminEmails />
         </TabsContent>
       )}
 

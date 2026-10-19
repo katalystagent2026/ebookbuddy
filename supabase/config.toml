@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-email]
 verify_jwt = false
+
+[functions.email-ai-assist]
+verify_jwt = false
