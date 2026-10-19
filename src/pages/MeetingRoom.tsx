@@ -8,15 +8,28 @@ import { useAuth } from "@/hooks/useAuth";
 import ZoomMeetingFrame from "@/components/ZoomMeetingFrame";
 import JitsiMeetingFrame from "@/components/JitsiMeetingFrame";
 
-const MeetingRoom = () => {
+type MeetingMode = "assigned" | "zoom" | "jitsi";
+
+const PROVIDER_LABEL = { zoom: "Zoom", jitsi: "Jitsi" } as const;
+
+interface MeetingRoomProps {
+  /**
+   * "assigned" (/meeting) opens the setup an admin assigned to this volunteer.
+   * "zoom" (/zoom) and "jitsi" (/meet) open the active setup of that provider.
+   */
+  mode?: MeetingMode;
+}
+
+const MeetingRoom = ({ mode = "assigned" }: MeetingRoomProps) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role, isAdmin } = useAuth();
   const [userName, setUserName] = useState("");
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
   const [setup, setSetup] = useState<{ id: string; name: string } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [notice, setNotice] = useState("There is no active meeting room right now. Please contact an administrator.");
   const headerRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [meetingHeight, setMeetingHeight] = useState(() => Math.max(320, window.innerHeight - 72));
@@ -64,56 +77,49 @@ const MeetingRoom = () => {
     }
   }, [user]);
 
-  // Confirm there is an active meeting configured (credentials come from the edge function)
+  // Pick the meeting setup for this page (credentials come from the edge functions)
   useEffect(() => {
-    if (!user) return;
+    if (!user || role === null) return;
     let cancelled = false;
     (async () => {
-      const { data: account } = await supabase
-        .from("zoom_accounts")
-        .select("id, name, meeting_id, video_provider")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const [{ data: setups }, { data: profile }] = await Promise.all([
+        supabase.from("zoom_accounts").select("id, name, is_active, video_provider"),
+        supabase.from("profiles").select("zoom_account_id").eq("user_id", user.id).maybeSingle(),
+      ]);
       if (cancelled) return;
 
-      if ((account as any)?.id) {
-        setSetup({ id: (account as any).id, name: (account as any).name || "" });
+      const active = (setups ?? []).filter((s) => s.is_active);
+      const assigned = active.find((s) => s.id === profile?.zoom_account_id) ?? null;
+      const ofProvider = (p: "zoom" | "jitsi") => active.find((s) => s.video_provider === p) ?? null;
+
+      let chosen: typeof assigned = null;
+      if (mode === "assigned") {
+        // Admins without an assignment can still get in; prefer Zoom when both are active.
+        chosen = assigned ?? (isAdmin ? ofProvider("zoom") ?? ofProvider("jitsi") : null);
+        if (!chosen) setNotice("You're not assigned to an active meeting room yet. Please contact an administrator.");
+      } else if (!ofProvider(mode)) {
+        setNotice(`The ${PROVIDER_LABEL[mode]} meeting room isn't active right now. Please contact an administrator.`);
+      } else if (isAdmin) {
+        chosen = ofProvider(mode);
+      } else if (assigned?.video_provider === mode) {
+        chosen = assigned;
+      } else {
+        setNotice(`You're assigned to a different meeting room. Use the Online Meeting Room button on your dashboard.`);
       }
 
-      const activeProvider = (account as any)?.video_provider === "jitsi" ? "jitsi" : "zoom";
-      console.log("[MeetingRoom] active setup video_provider:", (account as any)?.video_provider, "-> using:", activeProvider);
-      setProvider(activeProvider);
-
-      if (activeProvider === "jitsi") {
-        // The room name is secret now; the jitsi-token function returns it with the join token.
-        setMeetingId((account as any)?.id || null);
-        setIsChecking(false);
-        return;
+      if (chosen) {
+        const chosenProvider = chosen.video_provider === "jitsi" ? "jitsi" : "zoom";
+        console.log("[MeetingRoom] mode:", mode, "-> using provider:", chosenProvider);
+        setSetup({ id: chosen.id, name: chosen.name || "" });
+        setProvider(chosenProvider);
+        setMeetingId(chosen.id);
       }
-
-      if (account?.meeting_id) {
-        setMeetingId(account.meeting_id);
-        setIsChecking(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("zoom_config")
-        .select("meeting_id")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (cancelled) return;
-      setMeetingId(data?.meeting_id ?? null);
       setIsChecking(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, role, isAdmin, mode]);
 
   const ready = Boolean(meetingId && userName);
 
@@ -241,10 +247,10 @@ const MeetingRoom = () => {
             <CardContent className="pt-6 text-center">
               <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-heading font-semibold text-muted-foreground mb-2">
-                No Active Meeting
+                Meeting Room Unavailable
               </h3>
               <p className="text-sm text-muted-foreground">
-                There is no active Zoom meeting configured. Please contact an administrator.
+                {notice}
               </p>
             </CardContent>
           </Card>

@@ -70,6 +70,22 @@ const App = () => (
               }
             />
             <Route
+              path="/zoom"
+              element={
+                <ProtectedRoute>
+                  <MeetingRoom key="zoom" mode="zoom" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meet"
+              element={
+                <ProtectedRoute>
+                  <MeetingRoom key="jitsi" mode="jitsi" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin"
               element={
                 <ProtectedRoute requireAdmin>

@@ -78,11 +78,13 @@ serve(async (req) => {
       );
     }
 
-    // Always read the single ACTIVE Zoom Setup row — never trust client-supplied values
+    // Always read the single ACTIVE Zoom Setup row — never trust client-supplied values.
+    // A Jitsi setup can be active at the same time, so only look at Zoom rows.
     const { data: activeAccount, error: accountError } = await serviceClient
       .from("zoom_accounts")
       .select("id, name, meeting_id, passcode, sdk_key, sdk_secret, is_active, updated_at")
       .eq("is_active", true)
+      .eq("video_provider", "zoom")
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();

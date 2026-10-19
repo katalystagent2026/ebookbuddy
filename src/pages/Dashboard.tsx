@@ -33,14 +33,14 @@ const Dashboard = () => {
         .select("id, name, is_active, video_provider");
 
 
-      const activeSetup = (setups ?? []).find((s) => s.is_active);
+      // Zoom and Jitsi setups can both be active; the volunteer's own assigned setup decides.
       const linkedSetup = (setups ?? []).find((s) => s.id === profile?.zoom_account_id);
       const finalCanJoin =
         !profileError &&
         !setupsError &&
         profile?.is_verified === true &&
         !!profile.zoom_account_id &&
-        profile.zoom_account_id === activeSetup?.id;
+        linkedSetup?.is_active === true;
 
       console.log("[join-check] volunteer record:", {
         profileId: profile?.id,
@@ -51,15 +51,9 @@ const Dashboard = () => {
         profileError: profileError?.message ?? null,
       });
       console.log("[join-check] all setup rows:", setups, setupsError?.message ?? null);
-      console.log("[join-check] active setup row compared against:", {
-        id: activeSetup?.id ?? null,
-        name: activeSetup?.name ?? null,
-        is_active: activeSetup?.is_active ?? null,
-      });
       console.log("[join-check] comparison result:", {
         verified: profile?.is_verified === true,
-        nameMatch: !!linkedSetup?.name && linkedSetup?.name === activeSetup?.name,
-        idMatch: !!profile?.zoom_account_id && profile?.zoom_account_id === activeSetup?.id,
+        linkedSetupIsActive: linkedSetup?.is_active === true,
         finalCanJoin,
       });
       // --- END TEMPORARY DEBUG LOGGING ---

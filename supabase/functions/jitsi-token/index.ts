@@ -9,8 +9,6 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const ALLOWED_ROLES = ["admin", "staff", "volunteer", "student"];
-const MODERATOR_ROLES = ["admin", "staff", "volunteer"];
 const ROOM_PATTERN = /^ebb-[a-z0-9]{16}$/;
 const TOKEN_LIFETIME_SECONDS = 3 * 60 * 60;
 
@@ -43,10 +41,18 @@ Deno.serve(async (req) => {
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { data: roleRows } = await admin.from("user_roles").select("role").eq("user_id", u.user.id);
-    const roles = (roleRows ?? []).map((r: { role: string }) => String(r.role));
-    if (!roles.some((r) => ALLOWED_ROLES.includes(r))) {
-      return json({ error: "Your account doesn't have access to reading sessions yet." }, 403);
+    // Same rule as zoom-signature: admins, or verified volunteers an admin assigned to this setup.
+    const { data: isAdmin } = await admin.rpc("has_role", { _user_id: u.user.id, _role: "admin" });
+    let allowed = isAdmin === true;
+    if (!allowed) {
+      const [{ data: isVolunteer }, { data: profile }] = await Promise.all([
+        admin.rpc("has_role", { _user_id: u.user.id, _role: "volunteer" }),
+        admin.from("profiles").select("is_verified, zoom_account_id").eq("user_id", u.user.id).maybeSingle(),
+      ]);
+      allowed = isVolunteer === true && profile?.is_verified === true && profile?.zoom_account_id === setupId;
+    }
+    if (!allowed) {
+      return json({ error: "You're not assigned to this meeting room. Please contact an administrator." }, 403);
     }
 
     const { data: setup } = await admin
@@ -73,7 +79,8 @@ Deno.serve(async (req) => {
     const token = await new SignJWT({
       room,
       context: {
-        user: { id: u.user.id, name, moderator: roles.some((r) => MODERATOR_ROLES.includes(r)) },
+        // Only admins and volunteers get this far, and both are moderators.
+        user: { id: u.user.id, name, moderator: true },
       },
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
