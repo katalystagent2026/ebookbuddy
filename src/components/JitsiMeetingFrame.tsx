@@ -11,6 +11,7 @@ interface JitsiMeetingFrameProps {
 
 const JITSI_DOMAIN = "meet.ebookbuddy.org";
 const SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
+const MEETING_TITLE = "eBookBuddy Reading Session";
 
 /** Counts every mount of this component for debugging remount loops. */
 let mountCount = 0;
@@ -116,6 +117,17 @@ const JitsiMeetingFrameBase = ({ userName, setupId }: JitsiMeetingFrameProps) =>
           configOverwrite: {
             disableInviteFunctions: true,
             prejoinConfig: { enabled: true },
+            // The name comes from the signed-in account; don't let it be changed.
+            readOnlyName: true,
+            // Shown instead of the random room name (prejoin title and in-call header).
+            localSubject: MEETING_TITLE,
+            subject: MEETING_TITLE,
+          },
+          interfaceConfigOverwrite: {
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_BRAND_WATERMARK: false,
+            APP_NAME: "eBookBuddy",
+            PROVIDER_NAME: "eBookBuddy",
           },
         };
         // Don't log initOptions: it holds the join token, room name and the user's name.
