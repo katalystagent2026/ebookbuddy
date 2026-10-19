@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ebookbuddyLogo from "@/assets/ebookbuddy-logo.png";
 
 interface JitsiMeetingFrameProps {
   userName: string;
@@ -208,16 +209,21 @@ const JitsiMeetingFrameBase = ({ userName, setupId }: JitsiMeetingFrameProps) =>
         className="absolute inset-0 min-h-0 rounded-lg overflow-hidden"
         style={{ width: "100%", height: "100%", maxHeight: "100%" }}
       />
-      {/* Placeholder brand in the corner where Jitsi's (hidden) logo sits, until the
-          server serves our logo (docs/jitsi-server-branding.md). New tab so the call stays up. */}
+      {/* Covers Jitsi's own logo (the server ignores SHOW_JITSI_WATERMARK from the app)
+          until the server serves ours (docs/jitsi-server-branding.md). The dark panel is
+          sized to hide the whole Jitsi mark. New tab so the call stays up. */}
       {status === "joined" && (
         <a
           href="https://www.ebookbuddy.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute top-3 left-4 z-20 rounded-md bg-black/40 px-3 py-1 text-base font-heading font-semibold text-white hover:bg-black/60"
+          aria-label="eBookBuddy website"
+          className="absolute top-0 left-0 z-20 flex h-[84px] w-[132px] items-center rounded-tl-lg rounded-br-lg bg-[#141414] pl-4"
         >
-          eBookBuddy
+          {/* The source image has light corners; clip them with a slightly zoomed, rounded frame. */}
+          <span className="block h-14 w-14 overflow-hidden rounded-xl">
+            <img src={ebookbuddyLogo} alt="eBookBuddy" className="h-full w-full scale-110 object-cover" />
+          </span>
         </a>
       )}
     </div>
