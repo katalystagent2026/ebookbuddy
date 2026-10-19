@@ -123,6 +123,11 @@ const JitsiMeetingFrameBase = ({ userName, setupId }: JitsiMeetingFrameProps) =>
         const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, initOptions);
         activeInstance = { setupId, api };
 
+        // Uncover the frame as soon as Jitsi has loaded: the prejoin screen (and any
+        // Jitsi error) lives inside it, and videoConferenceJoined only fires after the
+        // user clicks Join there.
+        api.getIFrame?.()?.addEventListener("load", () => setStatus("joined"), { once: true });
+
         api.addEventListener("videoConferenceJoined", () => {
           console.log("[Jitsi] videoConferenceJoined fired");
           setStatus("joined");
