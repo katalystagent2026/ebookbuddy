@@ -74,6 +74,12 @@ export default function AdminRegistrations() {
         title: `Registration ${status}`,
         description: `The registration has been ${status}.`,
       });
+      const { error: mailError } = await supabase.functions.invoke('send-email', {
+        body: { type: 'registration_decision', registration_id: id },
+      });
+      if (mailError) {
+        toast({ title: 'Email not sent', description: "The guardian wasn't emailed about this decision." });
+      }
     }
   };
 

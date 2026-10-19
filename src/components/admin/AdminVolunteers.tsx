@@ -205,6 +205,14 @@ export default function AdminVolunteers() {
       toast({ title: 'Error updating status', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: next ? 'Moved to Verified' : 'Moved to New' });
+      if (next) {
+        const { error: mailError } = await supabase.functions.invoke('send-email', {
+          body: { type: 'volunteer_verified', user_id: p.user_id },
+        });
+        if (mailError) {
+          toast({ title: 'Email not sent', description: "The volunteer wasn't emailed about being verified." });
+        }
+      }
     }
   };
 

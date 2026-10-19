@@ -130,11 +130,20 @@ export function StudentRegistrationDialog({ open, onOpenChange }: StudentRegistr
           student_name: form.studentName,
           gender: form.gender,
           availability: form.availability,
+          language: lang,
         }),
         status: 'pending',
       });
 
       if (error) throw error;
+
+      // Confirmation email to the guardian. Fire-and-forget: a mail problem must not
+      // look like a failed registration.
+      supabase.functions
+        .invoke('send-email', { body: { type: 'registration_received', guardian_email: form.parentEmail } })
+        .then(({ error: mailError }) => {
+          if (mailError) console.warn('[registration] confirmation email not sent');
+        });
 
       toast({ title: t.successTitle, description: t.successDesc });
       onOpenChange(false);
