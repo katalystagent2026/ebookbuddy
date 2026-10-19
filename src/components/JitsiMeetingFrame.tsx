@@ -1,19 +1,39 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JitsiMeetingFrameProps {
   userName: string;
-  roomName: string;
+  /** Meeting setup (zoom_accounts row) id; the jitsi-token function resolves the room. */
+  setupId: string;
 }
 
-const JITSI_DOMAIN = "meet.jit.si";
+const JITSI_DOMAIN = "meet.ebookbuddy.org";
 const SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
 
 /** Counts every mount of this component for debugging remount loops. */
 let mountCount = 0;
-/** Guards against a second JitsiMeetExternalAPI instance for the same room. */
-let activeInstance: { room: string; api: any } | null = null;
+/** Guards against a second JitsiMeetExternalAPI instance for the same setup. */
+let activeInstance: { setupId: string; api: any } | null = null;
+
+const TOKEN_ERROR = "We couldn't get you into the video call. Please refresh the page, or ask your volunteer or an administrator for help.";
+
+/** Asks the jitsi-token edge function for a signed join token and the room name. */
+const fetchJitsiToken = async (setupId: string) => {
+  const { data, error } = await supabase.functions.invoke("jitsi-token", { body: { setup_id: setupId } });
+  if (error) {
+    let serverMessage = "";
+    try {
+      serverMessage = (await (error as { context?: Response }).context?.json())?.error || "";
+    } catch {
+      // response body was not JSON
+    }
+    throw new Error(serverMessage || TOKEN_ERROR);
+  }
+  if (!data?.token || !data?.room) throw new Error(data?.error || TOKEN_ERROR);
+  return { token: String(data.token), room: String(data.room) };
+};
 
 const loadJitsiScript = () =>
   new Promise<void>((resolve, reject) => {
@@ -40,9 +60,9 @@ const loadJitsiScript = () =>
  * mounted once, React never reconciles its children, and the external API owns
  * everything inside it.
  */
-const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) => {
+const JitsiMeetingFrameBase = ({ userName, setupId }: JitsiMeetingFrameProps) => {
   mountCount += 1;
-  console.log(`[Jitsi] component mounting/initializing (render/mount #${mountCount})`, { roomName });
+  console.log(`[Jitsi] component mounting/initializing (render/mount #${mountCount})`);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
@@ -60,9 +80,9 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
     }
     startedRef.current = true;
 
-    // A previous instance for this same room is still alive (fast remount /
+    // A previous instance for this same setup is still alive (fast remount /
     // StrictMode double-invoke). Re-attach instead of re-initializing.
-    if (activeInstance && activeInstance.room === roomName && containerRef.current) {
+    if (activeInstance && activeInstance.setupId === setupId && containerRef.current) {
       const iframe = activeInstance.api.getIFrame?.();
       if (iframe && containerRef.current !== iframe.parentNode) {
         console.log("[Jitsi] re-attaching existing iframe, no re-init");
@@ -76,7 +96,9 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
 
     (async () => {
       try {
-        if (!roomName) throw new Error("No meeting room configured. Please contact an administrator.");
+        if (!setupId) throw new Error("No meeting room configured. Please contact an administrator.");
+        const { token, room } = await fetchJitsiToken(setupId);
+        if (cancelled) return;
         await loadJitsiScript();
         if (cancelled || !containerRef.current) return;
 
@@ -85,19 +107,21 @@ const JitsiMeetingFrameBase = ({ userName, roomName }: JitsiMeetingFrameProps) =
 
         const displayName = userName?.trim() || "eBookBuddy User";
         const initOptions = {
-          roomName,
+          roomName: room,
+          jwt: token,
           parentNode: containerRef.current,
           width: "100%",
           height: "100%",
           userInfo: { displayName },
           configOverwrite: {
-            prejoinPageEnabled: false,
-            prejoinConfig: { enabled: false },
+            disableInviteFunctions: true,
+            prejoinConfig: { enabled: true },
           },
         };
-        console.log("[Jitsi] creating JitsiMeetExternalAPI (once)", { roomName, displayName, initOptions });
+        // Don't log initOptions: it holds the join token, room name and the user's name.
+        console.log("[Jitsi] creating JitsiMeetExternalAPI (once)");
         const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, initOptions);
-        activeInstance = { room: roomName, api };
+        activeInstance = { setupId, api };
 
         api.addEventListener("videoConferenceJoined", () => {
           console.log("[Jitsi] videoConferenceJoined fired");

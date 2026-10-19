@@ -14,7 +14,6 @@ const MeetingRoom = () => {
   const [userName, setUserName] = useState("");
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [provider, setProvider] = useState<"zoom" | "jitsi">("zoom");
-  const [jitsiRoom, setJitsiRoom] = useState("");
   const [setup, setSetup] = useState<{ id: string; name: string } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
@@ -72,7 +71,7 @@ const MeetingRoom = () => {
     (async () => {
       const { data: account } = await supabase
         .from("zoom_accounts")
-        .select("id, name, meeting_id, video_provider, jitsi_room_name")
+        .select("id, name, meeting_id, video_provider")
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
         .limit(1)
@@ -89,9 +88,8 @@ const MeetingRoom = () => {
       setProvider(activeProvider);
 
       if (activeProvider === "jitsi") {
-        const room = ((account as any)?.jitsi_room_name || "").trim();
-        setJitsiRoom(room);
-        setMeetingId(room || null);
+        // The room name is secret now; the jitsi-token function returns it with the join token.
+        setMeetingId((account as any)?.id || null);
         setIsChecking(false);
         return;
       }
@@ -257,8 +255,8 @@ const MeetingRoom = () => {
 
             {ready ? (
               provider === "jitsi" ? (
-                (console.log("[MeetingRoom] rendering JitsiMeetingFrame (no zoom-signature call), room:", jitsiRoom),
-                <JitsiMeetingFrame userName={userName} roomName={jitsiRoom} />)
+                (console.log("[MeetingRoom] rendering JitsiMeetingFrame (no zoom-signature call)"),
+                <JitsiMeetingFrame userName={userName} setupId={setup?.id ?? ""} />)
               ) : (
                 (console.log("[MeetingRoom] rendering ZoomMeetingFrame (Client View)"),
                 <ZoomMeetingFrame userName={userName} userEmail={user?.email} />)

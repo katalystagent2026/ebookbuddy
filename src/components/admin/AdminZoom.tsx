@@ -101,7 +101,6 @@ export default function AdminZoom() {
       passcode: form.passcode.trim(),
       is_active: form.is_active,
       video_provider: form.video_provider,
-      jitsi_room_name: form.jitsi_room_name.trim(),
     };
 
 
@@ -276,9 +275,13 @@ export default function AdminZoom() {
                 <Input
                   id="jitsi-room"
                   value={form.jitsi_room_name}
-                  onChange={(e) => setForm({ ...form, jitsi_room_name: e.target.value })}
-                  placeholder="ebookbuddy-reading-room"
+                  readOnly
+                  disabled
+                  placeholder="Created automatically when the first person joins"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Room names are random so nobody can guess them. Only signed-in users with a token can join.
+                </p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">

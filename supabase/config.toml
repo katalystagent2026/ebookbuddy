@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.assess-pronunciation]
 verify_jwt = false
+
+[functions.jitsi-token]
+verify_jwt = false
