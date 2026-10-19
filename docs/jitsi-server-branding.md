@@ -72,5 +72,5 @@ docker compose up -d --force-recreate web
 
 The eBookBuddy app currently **hides** the Jitsi logo
 (`SHOW_JITSI_WATERMARK: false` in `src/components/JitsiMeetingFrame.tsx`).
-Once the server shows our logo in that spot, remove that line from the app so
-the eBookBuddy logo can appear.
+It also places a placeholder "eBookBuddy" text link in that corner. Once the
+server shows our logo there, remove both from the app so the real logo appears.

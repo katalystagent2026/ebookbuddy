@@ -208,6 +208,18 @@ const JitsiMeetingFrameBase = ({ userName, setupId }: JitsiMeetingFrameProps) =>
         className="absolute inset-0 min-h-0 rounded-lg overflow-hidden"
         style={{ width: "100%", height: "100%", maxHeight: "100%" }}
       />
+      {/* Placeholder brand in the corner where Jitsi's (hidden) logo sits, until the
+          server serves our logo (docs/jitsi-server-branding.md). New tab so the call stays up. */}
+      {status === "joined" && (
+        <a
+          href="https://www.ebookbuddy.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute top-3 left-4 z-20 rounded-md bg-black/40 px-3 py-1 text-base font-heading font-semibold text-white hover:bg-black/60"
+        >
+          eBookBuddy
+        </a>
+      )}
     </div>
   );
 };
