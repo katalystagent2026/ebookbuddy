@@ -22,6 +22,8 @@ import { EMAIL_FIELDS } from '../../../../supabase/functions/_shared/email';
 
 const EMAIL_IMAGES_BUCKET = 'email-images';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** Email images stay in old emails for years; links expire after about 10 years. */
+const IMAGE_LINK_SECONDS = 10 * 365 * 24 * 60 * 60;
 
 interface RichTextEditorProps {
   value: string;
@@ -157,8 +159,13 @@ export default function RichTextEditor({ value, onChange, fields }: RichTextEdit
       const path = `${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from(EMAIL_IMAGES_BUCKET).upload(path, file, { contentType: file.type });
       if (error) throw error;
-      const { data } = supabase.storage.from(EMAIL_IMAGES_BUCKET).getPublicUrl(path);
-      editor.chain().focus().setImage({ src: data.publicUrl, alt: '' }).run();
+      // The workspace doesn't allow public buckets, so use a long-lived signed link that
+      // mail apps can load without signing in.
+      const { data, error: linkError } = await supabase.storage
+        .from(EMAIL_IMAGES_BUCKET)
+        .createSignedUrl(path, IMAGE_LINK_SECONDS);
+      if (linkError || !data?.signedUrl) throw linkError ?? new Error('Could not create image link');
+      editor.chain().focus().setImage({ src: data.signedUrl, alt: '' }).run();
     } catch (err) {
       toast({ title: 'Image upload failed', description: err instanceof Error ? err.message : undefined, variant: 'destructive' });
     } finally {
