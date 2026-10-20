@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Loader2, Monitor, Smartphone, SpellCheck, Sparkles, RotateCcw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +15,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import RichTextEditor from './RichTextEditor';
+import RichTextEditor, { type FieldMenuGroup } from './RichTextEditor';
 import {
-  DEFAULT_EMAILS, EMAIL_FIELDS, EMAIL_LAYOUTS, EMAIL_PURPOSES, fillFields, renderEmail,
+  ANSWER_FIELD_TYPES, DEFAULT_EMAILS, EMAIL_FIELDS, EMAIL_LAYOUTS, EMAIL_PURPOSES, FIELD_GROUPS, fillFields,
+  formFieldKey, renderEmail,
   type EmailLanguage, type EmailLayout, type EmailPurpose,
 } from '../../../../supabase/functions/_shared/email';
 
@@ -35,7 +36,41 @@ export interface EmailTemplate {
 type Draft = Omit<EmailTemplate, 'id' | 'updated_at'>;
 
 const NOT_USED = 'none';
-const SAMPLE_VALUES = Object.fromEntries(Object.entries(EMAIL_FIELDS).map(([k, f]) => [k, f.sample]));
+const BUILT_IN_SAMPLES = Object.fromEntries(Object.entries(EMAIL_FIELDS).map(([k, f]) => [k, f.sample]));
+
+/** A custom form from Settings → Forms/Link, with its answer fields in form order. */
+interface CustomForm {
+  key: string;
+  label: string;
+  fields: { key: string; label: string }[];
+}
+
+/** Loads custom forms (including /volunteer) so their fields can be inserted. */
+const useCustomForms = () => {
+  const [forms, setForms] = useState<CustomForm[]>([]);
+  useEffect(() => {
+    supabase
+      .from('forms')
+      .select('id, name, slug, fields, created_at')
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        setForms(
+          (data ?? []).map((f) => {
+            const formKey = f.slug || f.id;
+            const fields = (Array.isArray(f.fields) ? f.fields : []) as { name?: string; label?: string; type?: string }[];
+            return {
+              key: formKey,
+              label: `${f.name}${f.slug ? ` (/${f.slug})` : ''}`,
+              fields: fields
+                .filter((x) => x?.name && ANSWER_FIELD_TYPES.includes(String(x.type)))
+                .map((x) => ({ key: formFieldKey(formKey, String(x.name)), label: String(x.label || x.name) })),
+            };
+          }),
+        );
+      });
+  }, []);
+  return forms;
+};
 
 /** Sandboxed preview: the email's HTML can't run scripts or touch the admin page. */
 const EmailPreview = ({ html, width }: { html: string; width: 'desktop' | 'phone' }) => (
@@ -74,12 +109,38 @@ export default function EmailEditor({
   const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
 
   const purposeInfo = EMAIL_PURPOSES.find((p) => p.id === draft.purpose);
-  const fields = purposeInfo?.fields ?? Object.keys(EMAIL_FIELDS);
+  const customForms = useCustomForms();
+
+  // Built-in groups first (greyed out when this email can't fill them), then one group per custom form.
+  const fieldGroups: FieldMenuGroup[] = useMemo(
+    () => [
+      ...FIELD_GROUPS.map((g) => ({
+        id: g.id,
+        label: g.label,
+        fields: g.fields,
+        disabledReason:
+          purposeInfo && !purposeInfo.groups.includes(g.id)
+            ? `Not available in "${purposeInfo.label}": this email isn't about a ${g.id === 'student' ? 'student registration' : 'volunteer account'}.`
+            : undefined,
+      })),
+      ...customForms.map((f) => ({ id: `form:${f.key}`, label: `Form: ${f.label}`, fields: f.fields })),
+    ],
+    [purposeInfo, customForms],
+  );
+
+  // Preview samples: built-in fields get example values, form fields show their label.
+  const SAMPLE_VALUES = useMemo(
+    () => ({
+      ...Object.fromEntries(customForms.flatMap((f) => f.fields.map((x) => [x.key, `[${x.label}]`]))),
+      ...BUILT_IN_SAMPLES,
+    }),
+    [customForms],
+  );
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const preview = useMemo(
     () => renderEmail(draft.layout as EmailLayout, fillFields(draft.body_html || '<p></p>', SAMPLE_VALUES), draft.language as EmailLanguage),
-    [draft.layout, draft.body_html, draft.language],
+    [draft.layout, draft.body_html, draft.language, SAMPLE_VALUES],
   );
 
   const builtIn = draft.purpose
@@ -239,11 +300,18 @@ export default function EmailEditor({
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              <RichTextEditor value={draft.body_html} onChange={(html) => set({ body_html: html })} fields={fields} />
+              <RichTextEditor value={draft.body_html} onChange={(html) => set({ body_html: html })} fieldGroups={fieldGroups} />
               <p className="text-xs text-muted-foreground">
                 Images in emails can be seen by anyone with the link. Please don't upload photos of children or
-                anything private. Fields like <code>{'{{guardian_name}}'}</code> are filled in when the email is sent.
+                anything private. Fields like <code>{'{{guardian_name}}'}</code> are filled in when the email is sent;
+                a field with no answer is left blank.
               </p>
+              {draft.purpose === 'admin_new_registration' && (
+                <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  This notice goes to info@ebookbuddy.org. Only add a child's details (name, school, grade) if your team
+                  really needs them in the inbox; they're always available in Admin → Registrations.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

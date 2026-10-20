@@ -22,25 +22,125 @@ export const EMAIL_LAYOUTS: { id: EmailLayout; label: string; description: strin
   { id: "newsletter", label: "Newsletter", description: "Centered header, accent stripe, full footer" },
 ];
 
-/** Placeholders an admin can insert as {{key}}; filled in when the email is sent. */
-export const EMAIL_FIELDS: Record<string, { label: string; sample: string }> = {
-  guardian_name: { label: "Guardian name", sample: "Alex Rivera" },
-  volunteer_name: { label: "Volunteer name", sample: "Jordan Lee" },
-  site_link: { label: "Website link", sample: SITE_URL },
-  admin_link: { label: "Admin page link", sample: `${SITE_URL}/admin` },
-};
+export type FieldGroupId = "general" | "student" | "volunteer";
+
+export interface EmailField {
+  key: string;
+  label: string;
+  sample: string;
+}
 
 /**
- * `englishOnly`: the recipient's language isn't known (volunteers, the admin inbox),
- * so only the English template is used.
+ * Built-in placeholders an admin can insert as {{key}}, grouped for the "Insert field"
+ * menu and listed in the order the source form asks for them. Custom forms (Settings →
+ * Forms/Link, including /volunteer) add their own groups at runtime as {{form.<form>.<field>}}.
  */
-export const EMAIL_PURPOSES: { id: EmailPurpose; label: string; fields: string[]; englishOnly?: boolean }[] = [
-  { id: "registration_received", label: "Registration received (to guardian)", fields: ["guardian_name", "site_link"] },
-  { id: "registration_approved", label: "Registration approved (to guardian)", fields: ["guardian_name", "site_link"] },
-  { id: "registration_rejected", label: "Registration not accepted (to guardian)", fields: ["guardian_name", "site_link"] },
-  { id: "volunteer_verified", label: "Volunteer verified (to volunteer)", fields: ["volunteer_name", "site_link"], englishOnly: true },
-  { id: "admin_new_registration", label: "New registration notice (to info@)", fields: ["admin_link"], englishOnly: true },
+export const FIELD_GROUPS: { id: FieldGroupId; label: string; fields: EmailField[] }[] = [
+  {
+    id: "general",
+    label: "General",
+    fields: [
+      { key: "site_link", label: "Website link", sample: SITE_URL },
+      { key: "admin_link", label: "Admin page link", sample: `${SITE_URL}/admin` },
+    ],
+  },
+  {
+    id: "student",
+    label: "Student Registration",
+    fields: [
+      { key: "student_name", label: "Student name", sample: "Sam Rivera" },
+      { key: "grade", label: "Grade", sample: "3rd" },
+      { key: "gender", label: "Gender", sample: "Female" },
+      { key: "school_name", label: "School name", sample: "Oak Hill Elementary" },
+      { key: "guardian_name", label: "Parent/guardian name", sample: "Alex Rivera" },
+      { key: "guardian_phone", label: "Parent/guardian phone", sample: "(555) 123-4567" },
+      { key: "guardian_email", label: "Parent/guardian email", sample: "parent@email.com" },
+      { key: "availability", label: "Availability", sample: "Mon/Wed 7:00 – 7:30 PM" },
+    ],
+  },
+  {
+    id: "volunteer",
+    label: "Volunteer account",
+    fields: [
+      { key: "volunteer_name", label: "Volunteer name", sample: "Jordan Lee" },
+      { key: "volunteer_email", label: "Volunteer email", sample: "volunteer@email.com" },
+    ],
+  },
 ];
+
+/** All built-in fields by key (labels and preview samples). */
+export const EMAIL_FIELDS: Record<string, EmailField> = Object.fromEntries(
+  FIELD_GROUPS.flatMap((g) => g.fields).map((f) => [f.key, f]),
+);
+
+/** Placeholder key for a custom form's field. `formKey` is the form's slug (or id). */
+export const formFieldKey = (formKey: string, fieldName: string) => `form.${formKey}.${fieldName}`;
+
+/** Form field types that hold an answer (headings and paragraphs are just text on the form). */
+export const ANSWER_FIELD_TYPES = ["text", "email", "tel", "number", "date", "textarea", "select", "checkbox"];
+
+/**
+ * `groups`: built-in field groups that can be filled for this email (custom form fields
+ * always can, from the recipient's own answers). `englishOnly`: the recipient's language
+ * isn't known (volunteers, the admin inbox), so only the English template is used.
+ */
+export const EMAIL_PURPOSES: { id: EmailPurpose; label: string; groups: FieldGroupId[]; englishOnly?: boolean }[] = [
+  { id: "registration_received", label: "Registration received (to guardian)", groups: ["general", "student"] },
+  { id: "registration_approved", label: "Registration approved (to guardian)", groups: ["general", "student"] },
+  { id: "registration_rejected", label: "Registration not accepted (to guardian)", groups: ["general", "student"] },
+  { id: "volunteer_verified", label: "Volunteer verified (to volunteer)", groups: ["general", "volunteer"], englishOnly: true },
+  { id: "admin_new_registration", label: "New registration notice (to info@)", groups: ["general", "student"], englishOnly: true },
+];
+
+/** Readable labels for the student form's coded answers, in the email's language. */
+const GENDER_LABELS: Record<string, Record<EmailLanguage, string>> = {
+  male: { en: "Male", es: "Masculino" },
+  female: { en: "Female", es: "Femenino" },
+  other: { en: "Other", es: "Otro" },
+  "prefer-not-to-say": { en: "Prefer not to say", es: "Prefiero no decir" },
+};
+const AVAILABILITY_LABELS: Record<string, Record<EmailLanguage, string>> = {
+  "mon-wed-7-730": { en: "Mon/Wed 7:00 – 7:30 PM", es: "Lun/Mié 7:00 – 7:30 PM" },
+  "mon-wed-730-8": { en: "Mon/Wed 7:30 – 8:00 PM", es: "Lun/Mié 7:30 – 8:00 PM" },
+};
+
+const label = (map: Record<string, Record<EmailLanguage, string>>, code: unknown, lang: EmailLanguage) => {
+  const c = typeof code === "string" ? code : "";
+  return map[c]?.[lang] ?? c;
+};
+
+/** Student Registration field values from a registrations row (answers also live in its notes JSON). */
+export const studentFieldValues = (
+  reg: { guardian_name?: string | null; guardian_email?: string | null; guardian_phone?: string | null; school_name?: string | null; grade_level?: string | null; notes?: string | null },
+  lang: EmailLanguage,
+): Record<string, string> => {
+  let notes: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(reg.notes ?? "{}");
+    if (parsed && typeof parsed === "object") notes = parsed;
+  } catch {
+    // notes not JSON
+  }
+  return {
+    student_name: String(notes.student_name ?? ""),
+    grade: reg.grade_level ?? "",
+    gender: label(GENDER_LABELS, notes.gender, lang),
+    school_name: reg.school_name ?? "",
+    guardian_name: reg.guardian_name ?? "",
+    guardian_phone: reg.guardian_phone ?? "",
+    guardian_email: reg.guardian_email ?? "",
+    availability: label(AVAILABILITY_LABELS, notes.availability, lang),
+  };
+};
+
+/** Turns a custom form answer into text for an email. */
+export const answerText = (value: unknown, lang: EmailLanguage) => {
+  if (value === true) return lang === "es" ? "Sí" : "Yes";
+  if (value === false) return "No";
+  if (Array.isArray(value)) return value.map(String).join(", ");
+  if (value === null || value === undefined) return "";
+  return typeof value === "object" ? "" : String(value);
+};
 
 /** Used for a missing name so greetings never read "Hi ,". */
 export const NAME_FALLBACK: Record<EmailLanguage, string> = { en: "there", es: "familia" };
@@ -112,14 +212,19 @@ export const DEFAULT_EMAILS: Record<EmailPurpose, Partial<Record<EmailLanguage, 
 export const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+/** Matches {{field}} and {{form.<form>.<field>}} placeholders. */
+export const PLACEHOLDER_PATTERN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+
 /**
  * Replaces {{field}} placeholders. Values are HTML-escaped unless `asText` is set
- * (for the subject line). Unknown placeholders are left as they are.
+ * (for the subject line). Placeholders without a value are left as they are, or
+ * removed with `blankMissing` (when sending, so nobody receives a raw {{field}}).
  */
-export const fillFields = (template: string, values: Record<string, string>, asText = false) =>
-  template.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (match, key: string) =>
-    key in values ? (asText ? values[key].replace(/[\r\n]+/g, " ") : escapeHtml(values[key])) : match,
-  );
+export const fillFields = (template: string, values: Record<string, string>, asText = false, blankMissing = false) =>
+  template.replace(PLACEHOLDER_PATTERN, (match, key: string) => {
+    if (!(key in values)) return blankMissing ? "" : match;
+    return asText ? values[key].replace(/[\r\n]+/g, " ") : escapeHtml(values[key]);
+  });
 
 /** Plain-text version for mail apps that don't show HTML. */
 export const htmlToText = (html: string) =>

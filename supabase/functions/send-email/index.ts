@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
-  DEFAULT_EMAILS, EMAIL_PURPOSES, NAME_FALLBACK, SITE_URL, fillFields, htmlToText, renderEmail,
+  ANSWER_FIELD_TYPES, DEFAULT_EMAILS, EMAIL_PURPOSES, NAME_FALLBACK, SITE_URL, answerText, fillFields,
+  formFieldKey, htmlToText, renderEmail, studentFieldValues,
   type EmailLanguage, type EmailLayout, type EmailPurpose,
 } from "../_shared/email.ts";
 
@@ -21,11 +22,53 @@ const CONFIRMATION_WINDOW_MINUTES = 15;
 type Lang = EmailLanguage;
 type Db = ReturnType<typeof createClient>;
 
+/** Who an email is about, used to find their answers to custom forms. */
+type Person = { userId?: string | null; email?: string | null };
+
+/**
+ * Values for {{form.<form>.<field>}} placeholders: the person's most recent answers to
+ * each custom form (Settings → Forms/Link), matched by their account or by their email
+ * address appearing among the answers.
+ */
+const formFieldValues = async (db: Db, person: Person, lang: Lang) => {
+  const values: Record<string, string> = {};
+  const email = person.email?.trim().toLowerCase();
+  if (!person.userId && !email) return values;
+
+  const { data: forms } = await db.from("forms").select("id, slug, fields");
+  const { data: submissions } = await db
+    .from("form_submissions")
+    .select("form_id, user_id, data")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+
+  const isTheirs = (sub: { user_id: string | null; data: unknown }) => {
+    if (person.userId && sub.user_id === person.userId) return true;
+    if (!email || !sub.data || typeof sub.data !== "object") return false;
+    return Object.values(sub.data as Record<string, unknown>).some(
+      (v) => typeof v === "string" && v.trim().toLowerCase() === email,
+    );
+  };
+
+  for (const form of forms ?? []) {
+    const latest = (submissions ?? []).find((s) => s.form_id === form.id && isTheirs(s));
+    if (!latest) continue;
+    const answers = (latest.data ?? {}) as Record<string, unknown>;
+    const fields = Array.isArray(form.fields) ? (form.fields as { name?: string; type?: string }[]) : [];
+    for (const f of fields) {
+      if (!f?.name || !ANSWER_FIELD_TYPES.includes(String(f.type))) continue;
+      values[formFieldKey(form.slug || form.id, f.name)] = answerText(answers[f.name], lang);
+    }
+  }
+  return values;
+};
+
 /**
  * Builds the email for a purpose: the admin's saved template (Settings → Emails) for
- * that purpose and language if there is one, otherwise the built-in wording.
+ * that purpose and language if there is one, otherwise the built-in wording. Fields
+ * without a value are left blank.
  */
-const composeEmail = async (db: Db, purpose: EmailPurpose, lang: Lang, values: Record<string, string>) => {
+const composeEmail = async (db: Db, purpose: EmailPurpose, lang: Lang, values: Record<string, string>, person: Person = {}) => {
   const englishOnly = EMAIL_PURPOSES.find((p) => p.id === purpose)?.englishOnly;
   const language: Lang = englishOnly ? "en" : lang;
   const { data: saved } = await db
@@ -38,10 +81,18 @@ const composeEmail = async (db: Db, purpose: EmailPurpose, lang: Lang, values: R
   const subject = saved?.subject?.trim() ? saved.subject : fallback.subject;
   const bodyTemplate = saved?.body_html?.trim() ? saved.body_html : fallback.body;
   const layout = (saved?.layout ?? "classic") as EmailLayout;
-  const filled = { site_link: SITE_URL, admin_link: `${SITE_URL}/admin`, ...values };
-  const body = fillFields(bodyTemplate, filled);
+
+  // Only look up form answers when the email actually uses a form field.
+  const usesForms = `${subject}${bodyTemplate}`.includes("{{form.");
+  const filled = {
+    ...(usesForms ? await formFieldValues(db, person, language) : {}),
+    site_link: SITE_URL,
+    admin_link: `${SITE_URL}/admin`,
+    ...values,
+  };
+  const body = fillFields(bodyTemplate, filled, false, true);
   return {
-    subject: fillFields(subject, filled, true),
+    subject: fillFields(subject, filled, true, true),
     html: renderEmail(layout, body, language),
     text: `${htmlToText(body)}
 
@@ -92,7 +143,7 @@ Deno.serve(async (req) => {
       const since = new Date(Date.now() - CONFIRMATION_WINDOW_MINUTES * 60_000).toISOString();
       const { data: reg } = await admin
         .from("registrations")
-        .select("id, guardian_name, notes")
+        .select("id, user_id, guardian_name, guardian_email, guardian_phone, school_name, grade_level, notes")
         .eq("guardian_email", email)
         .eq("status", "pending")
         .is("confirmation_emailed_at", null)
@@ -113,8 +164,10 @@ Deno.serve(async (req) => {
       if (!claimed) return json({ ok: true, sent: false });
 
       const lang = languageOf(reg.notes);
-      await sendEmail(email, await composeEmail(admin, "registration_received", lang, { guardian_name: nameOr(reg.guardian_name, lang) }));
-      await composeEmail(admin, "admin_new_registration", "en", {})
+      const person = { userId: reg.user_id, email };
+      const student = studentFieldValues(reg, lang);
+      await sendEmail(email, await composeEmail(admin, "registration_received", lang, { ...student, guardian_name: nameOr(reg.guardian_name, lang) }, person));
+      await composeEmail(admin, "admin_new_registration", "en", studentFieldValues(reg, "en"), person)
         .then((mail) => sendEmail(ADMIN_INBOX, mail))
         .catch((e) => console.error("send-email admin notice", String(e)));
       return json({ ok: true, sent: true });
@@ -131,25 +184,27 @@ Deno.serve(async (req) => {
     if (type === "registration_decision") {
       const { data: reg } = await admin
         .from("registrations")
-        .select("guardian_email, guardian_name, status, notes")
+        .select("user_id, guardian_email, guardian_name, guardian_phone, school_name, grade_level, status, notes")
         .eq("id", String(body?.registration_id ?? ""))
         .maybeSingle();
       if (!reg || !isEmail(reg.guardian_email)) return json({ ok: true, sent: false });
       if (reg.status !== "approved" && reg.status !== "rejected") return json({ ok: true, sent: false });
       const lang = languageOf(reg.notes);
       const purpose = reg.status === "approved" ? "registration_approved" : "registration_rejected";
-      await sendEmail(reg.guardian_email, await composeEmail(admin, purpose, lang, { guardian_name: nameOr(reg.guardian_name, lang) }));
+      const values = { ...studentFieldValues(reg, lang), guardian_name: nameOr(reg.guardian_name, lang) };
+      await sendEmail(reg.guardian_email, await composeEmail(admin, purpose, lang, values, { userId: reg.user_id, email: reg.guardian_email }));
       return json({ ok: true, sent: true });
     }
 
     if (type === "volunteer_verified") {
       const { data: profile } = await admin
         .from("profiles")
-        .select("email, full_name, is_verified")
+        .select("user_id, email, full_name, is_verified")
         .eq("user_id", String(body?.user_id ?? ""))
         .maybeSingle();
       if (!profile?.is_verified || !isEmail(profile.email)) return json({ ok: true, sent: false });
-      await sendEmail(profile.email, await composeEmail(admin, "volunteer_verified", "en", { volunteer_name: nameOr(profile.full_name, "en") }));
+      const values = { volunteer_name: nameOr(profile.full_name, "en"), volunteer_email: profile.email };
+      await sendEmail(profile.email, await composeEmail(admin, "volunteer_verified", "en", values, { userId: profile.user_id, email: profile.email }));
       return json({ ok: true, sent: true });
     }
 

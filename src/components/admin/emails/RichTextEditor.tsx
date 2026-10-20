@@ -12,13 +12,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { EMAIL_FIELDS } from '../../../../supabase/functions/_shared/email';
+
+/** A group in the "Insert field" menu (Student Registration, a custom form, …). */
+export interface FieldMenuGroup {
+  id: string;
+  label: string;
+  fields: { key: string; label: string }[];
+  /** Shown instead of the fields when this group can't be filled for the current email. */
+  disabledReason?: string;
+}
 
 const EMAIL_IMAGES_BUCKET = 'email-images';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -28,8 +37,8 @@ const IMAGE_LINK_SECONDS = 10 * 365 * 24 * 60 * 60;
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
-  /** {{field}} placeholders offered by "Insert field" (depends on what the email is used for). */
-  fields: string[];
+  /** {{field}} placeholders offered by "Insert field", grouped by where the data comes from. */
+  fieldGroups: FieldMenuGroup[];
 }
 
 const ToolButton = ({
@@ -109,7 +118,7 @@ const LinkButton = ({ editor }: { editor: Editor }) => {
   );
 };
 
-export default function RichTextEditor({ value, onChange, fields }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, fieldGroups }: RichTextEditorProps) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -215,7 +224,7 @@ export default function RichTextEditor({ value, onChange, fields }: RichTextEdit
             if (file) uploadImage(file);
           }}
         />
-        {fields.length > 0 && (
+        {fieldGroups.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
@@ -223,12 +232,30 @@ export default function RichTextEditor({ value, onChange, fields }: RichTextEdit
                 Insert field
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {fields.map((key) => (
-                <DropdownMenuItem key={key} onSelect={() => chain().insertContent(`{{${key}}}`).run()}>
-                  {EMAIL_FIELDS[key]?.label ?? key}
-                  <code className="ml-auto pl-3 text-xs text-muted-foreground">{`{{${key}}}`}</code>
-                </DropdownMenuItem>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Filled in when the email is sent
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {fieldGroups.map((group) => (
+                <DropdownMenuSub key={group.id}>
+                  <DropdownMenuSubTrigger className={cn(group.disabledReason && 'text-muted-foreground')}>
+                    <span className="truncate">{group.label}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto">
+                    {group.disabledReason ? (
+                      <p className="px-2 py-1.5 text-xs text-muted-foreground">{group.disabledReason}</p>
+                    ) : group.fields.length === 0 ? (
+                      <p className="px-2 py-1.5 text-xs text-muted-foreground">This form has no answer fields yet.</p>
+                    ) : (
+                      group.fields.map((f) => (
+                        <DropdownMenuItem key={f.key} onSelect={() => chain().insertContent(`{{${f.key}}}`).run()}>
+                          {f.label}
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>

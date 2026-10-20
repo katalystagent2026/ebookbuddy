@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { PLACEHOLDER_PATTERN } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +23,7 @@ You receive an email subject and an HTML body and return improved versions.
 Rules:
 - Return the body as HTML using only these tags: p, h1, h2, h3, strong, em, u, s, a, ul, ol, li, blockquote, br, hr.
 - Keep every token like [[IMAGE_1]] exactly as written, in the same place, each on its own.
-- Keep every placeholder like {{guardian_name}} exactly as written.
+- Keep every placeholder like {{guardian_name}} or {{form.volunteer.phone}} exactly as written.
 - Keep every link's href exactly as it is.
 - Write in the same language as the original (English or Spanish).
 - In "notes", briefly list the main changes in plain English (one short sentence each, at most 5).`;
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
     if (tokensIn(outHtml, /\[\[IMAGE_\d+\]\]/g) !== tokensIn(masked, /\[\[IMAGE_\d+\]\]/g)) {
       return json({ error: "The AI moved or dropped an image. Please try again." }, 502);
     }
-    if (tokensIn(outHtml, /\{\{\s*[a-z_]+\s*\}\}/g) !== tokensIn(masked, /\{\{\s*[a-z_]+\s*\}\}/g)) {
+    if (tokensIn(outHtml, PLACEHOLDER_PATTERN) !== tokensIn(masked, PLACEHOLDER_PATTERN)) {
       return json({ error: "The AI changed a field placeholder. Please try again." }, 502);
     }
     outHtml = outHtml
