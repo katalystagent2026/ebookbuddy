@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   ANSWER_FIELD_TYPES, DEFAULT_EMAILS, EMAIL_PURPOSES, NAME_FALLBACK, SITE_URL, answerText, fillFields,
   formFieldKey, htmlToText, renderEmail, studentFieldValues,
@@ -20,7 +20,7 @@ const ADMIN_INBOX = "info@ebookbuddy.org";
 const CONFIRMATION_WINDOW_MINUTES = 15;
 
 type Lang = EmailLanguage;
-type Db = ReturnType<typeof createClient>;
+type Db = SupabaseClient;
 
 /** Who an email is about, used to find their answers to custom forms. */
 type Person = { userId?: string | null; email?: string | null };
